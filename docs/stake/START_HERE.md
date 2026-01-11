@@ -42,19 +42,19 @@
 
 ### 🌟 Главные документы (читай по порядку):
 
-#### 1️⃣ **[STAKE_ENGINE_IMPLEMENTATION.md](STAKE_ENGINE_IMPLEMENTATION.md)** ⭐ **НАЧНИ ОТСЮДА!**
-- Overview архитектуры Stake Engine
-- Что нужно делать (2 фазы)
-- Что НЕ нужно делать (экономия времени)
-- Timeline (3 недели)
+#### 1️⃣ **[MATH_SDK_SETUP_INSTRUCTIONS.md](MATH_SDK_SETUP_INSTRUCTIONS.md)** ⭐ **НАЧНИ ОТСЮДА!**
+- **Вариант 3: Fork официального Math SDK** (рекомендуется)
+- Пошаговая инструкция setup (9 шагов)
+- Копирование кода из MATH_SDK_DETAILED_GUIDE.md
+- Тестирование, генерация, upload
+- Troubleshooting & чеклист
 
-#### 2️⃣ **[STAKE_MATH_SDK_GUIDE.md](STAKE_MATH_SDK_GUIDE.md)** - Python Math SDK
-- Детальная инструкция по Math SDK
-- 8 Python файлов с полным кодом
+#### 2️⃣ **[MATH_SDK_DETAILED_GUIDE.md](MATH_SDK_DETAILED_GUIDE.md)** - Полный код Python
+- game.py (400+ строк) - игровая логика
+- simulate.py (150+ строк) - RTP симуляция
 - Hand evaluation (13 типов)
-- Joker resolution
-- RTP simulation
-- Upload to Stake Engine
+- Joker resolution алгоритм
+- Event generation
 
 #### 3️⃣ **[STAKE_CLIENT_INTEGRATION.md](STAKE_CLIENT_INTEGRATION.md)** - TypeScript Client
 - Установка `stake-engine` package
@@ -63,7 +63,13 @@
 - Event listeners
 - Production build & deploy
 
-#### 4️⃣ **[STAKE_ENGINE_SUMMARY.md](STAKE_ENGINE_SUMMARY.md)** - Complete Summary
+#### 4️⃣ **[STAKE_ENGINE_IMPLEMENTATION.md](STAKE_ENGINE_IMPLEMENTATION.md)** - Архитектура
+- Overview архитектуры Stake Engine
+- Что нужно делать (2 фазы)
+- Что НЕ нужно делать (экономия времени)
+- Timeline (3 недели)
+
+#### 5️⃣ **[STAKE_ENGINE_SUMMARY.md](STAKE_ENGINE_SUMMARY.md)** - Complete Summary
 - Полная сводка проекта
 - Checklist (3 недели)
 - Expected results
@@ -75,28 +81,43 @@
 
 ### Для Math SDK Developer (Python):
 
+**✅ Выбран Вариант 3: Fork официального Math SDK**
+
 ```bash
-# 1. Clone Stake Math SDK
-git clone https://github.com/StakeEngine/math-sdk.git
-cd math-sdk
+# 1. Fork на GitHub
+open https://github.com/StakeEngine/math-sdk
+# Нажми "Fork" → Переименуй в "pokerspin-math"
 
-# 2. Setup
+# 2. Clone ТВОЙ fork
+cd ~/Projects/_casik/
+git clone https://github.com/YOUR_ORG/math-sdk.git pokerspin-math
+cd pokerspin-math
+
+# 3. Setup
 make setup
+source venv/bin/activate
 
-# 3. Create Joker Poker game
+# 4. Create Joker Poker game
 mkdir -p games/joker_poker
+cd games/joker_poker
+touch __init__.py game.py simulate.py
 
-# 4. Copy code from STAKE_MATH_SDK_GUIDE.md
-# (8 Python files)
+# 5. Copy code from MATH_SDK_DETAILED_GUIDE.md
+# (game.py + simulate.py)
 
-# 5. Run simulation
+# 6. Run simulation
+cd ../..
 python -m games.joker_poker.simulate
-
 # Expected: RTP 97% ✅
 
-# 6. Upload to Stake Engine
+# 7. Generate outcomes (30-60 min)
+python -m games.joker_poker.simulate --generate --count 10000000
+
+# 8. Upload to Stake Engine
 make upload GAME=joker_poker
 ```
+
+**📖 Полная инструкция:** [MATH_SDK_SETUP_INSTRUCTIONS.md](MATH_SDK_SETUP_INSTRUCTIONS.md)
 
 ### Для Frontend Developer (TypeScript):
 

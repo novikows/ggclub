@@ -4,19 +4,47 @@ Casino poker game with Joker wild cards, built for **Stake Engine** platform.
 
 ## 📦 Project Structure
 
+### This Repository (Frontend)
+
 ```
 pokerspin/
 ├── client/          # Frontend (PixiJS + TypeScript) ✅ COMPLETE
-├── docs/            # Original documentation
-│   ├── quick_start_guide.md
-│   ├── global_specification.md
-│   └── state_machine_brief.md
-├── packages/        # Monorepo (future)
-│   ├── client/      # Frontend
-│   ├── shared/      # Shared types
-│   └── math-sdk/    # Stake Math SDK (Python)
-└── [Stake Engine Specs] # Integration docs ⭐
+│   ├── src/
+│   │   ├── api/    # RGS client (mock → real)
+│   │   ├── game/   # Game logic & state machine
+│   │   └── ui/     # PixiJS components
+│   └── public/     # Assets (cards, backgrounds)
+├── docs/
+│   ├── stake/      # Stake Engine integration docs ⭐
+│   │   ├── START_HERE.md
+│   │   ├── MATH_SDK_SETUP_INSTRUCTIONS.md
+│   │   ├── DECISION_SUMMARY.md  🆕
+│   │   └── ...
+│   └── [original specs]
+└── README.md       # This file
 ```
+
+### Separate Repository (Math SDK)
+
+**Decision:** Fork официального Stake Engine Math SDK
+
+```
+pokerspin-math/  (fork от https://github.com/StakeEngine/math-sdk)
+├── games/
+│   └── joker_poker/     # Game math (Python)
+│       ├── game.py      # Hand evaluation, Joker logic
+│       └── simulate.py  # RTP simulation
+└── uploads/
+    └── joker_poker/     # Generated outcomes
+```
+
+**Why separate?**
+- ✅ Math SDK используется 1 раз (для генерации outcomes)
+- ✅ Frontend активная разработка
+- ✅ Разные языки (Python vs TypeScript)
+- ✅ Math SDK архивируется после upload
+
+**Details:** [docs/stake/DECISION_SUMMARY.md](docs/stake/DECISION_SUMMARY.md)
 
 ## 🚀 Quick Start
 
@@ -44,19 +72,24 @@ npm run dev
 
 🔄 **Next: Stake Engine Integration (3 weeks)**
 
-#### Week 1: Math SDK (Python)
-- Setup Stake Math SDK
-- Implement Joker Poker game logic
-- Generate 10M outcomes
-- Upload to Stake Engine
+**Архитектура:** Fork Math SDK + Frontend в этом репо
+- 📖 **[docs/stake/DECISION_SUMMARY.md](docs/stake/DECISION_SUMMARY.md)** - Детали решения
 
-#### Week 2: Frontend Integration
+#### Week 1: Math SDK (Python) → Отдельный репо `pokerspin-math`
+- ✅ Fork Stake Engine Math SDK
+- ✅ Implement Joker Poker game logic
+- ✅ Generate 10M outcomes
+- ✅ Upload to Stake Engine
+- 📖 **[MATH_SDK_SETUP_INSTRUCTIONS.md](docs/stake/MATH_SDK_SETUP_INSTRUCTIONS.md)**
+
+#### Week 2: Frontend Integration → Этот репо `pokerspin`
 - Install `stake-engine` npm package
 - Replace mock with real client
 - Add event listeners
 - Testing
+- 📖 **[STAKE_CLIENT_INTEGRATION.md](docs/stake/STAKE_CLIENT_INTEGRATION.md)**
 
-#### Week 3: Production Deploy
+#### Week 3: Production Deploy → Stake CDN
 - Build for production
 - Upload to Stake CDN
 - QA testing
@@ -66,21 +99,24 @@ npm run dev
 
 ## 📚 Documentation
 
-### 🌟 Start Here:
+### 🌟 Stake Engine Integration (Start Here!):
 
-**For Stake Engine Integration:**
-1. **[STAKE_ENGINE_IMPLEMENTATION.md](STAKE_ENGINE_IMPLEMENTATION.md)** ⭐ **READ FIRST!**
-2. **[STAKE_MATH_SDK_GUIDE.md](STAKE_MATH_SDK_GUIDE.md)** - Python Math SDK
-3. **[STAKE_CLIENT_INTEGRATION.md](STAKE_CLIENT_INTEGRATION.md)** - TypeScript Client
-4. **[STAKE_ENGINE_SUMMARY.md](STAKE_ENGINE_SUMMARY.md)** - Complete Summary
-5. **[NEXT_STEPS_STAKE_ENGINE.md](NEXT_STEPS_STAKE_ENGINE.md)** - Implementation Plan
+📁 **[docs/stake/](docs/stake/)** - All Stake Engine specs
 
-**Current MVP:**
-- **[START_HERE.md](START_HERE.md)** - MVP Overview
+1. **[docs/stake/START_HERE.md](docs/stake/START_HERE.md)** ⭐ **READ FIRST!**
+2. **[docs/stake/DECISION_SUMMARY.md](docs/stake/DECISION_SUMMARY.md)** 🆕 **Архитектурное решение**
+3. **[docs/stake/MATH_SDK_SETUP_INSTRUCTIONS.md](docs/stake/MATH_SDK_SETUP_INSTRUCTIONS.md)** 🆕 **Week 1 Setup**
+4. **[docs/stake/MATH_SDK_DETAILED_GUIDE.md](docs/stake/MATH_SDK_DETAILED_GUIDE.md)** - Python код
+5. **[docs/stake/STAKE_CLIENT_INTEGRATION.md](docs/stake/STAKE_CLIENT_INTEGRATION.md)** - Week 2 Frontend
+6. **[docs/stake/NEXT_STEPS_STAKE_ENGINE.md](docs/stake/NEXT_STEPS_STAKE_ENGINE.md)** - Полный чеклист
+7. **[docs/stake/README.md](docs/stake/README.md)** - Documentation index
+
+### Current MVP:
 - **[client/README.md](client/README.md)** - Client docs
 - **[client/TESTING.md](client/TESTING.md)** - Test guide
+- **[MVP_SUMMARY.md](MVP_SUMMARY.md)** - MVP overview
 
-**Original Specs:**
+### Original Specs:
 - **[docs/quick_start_guide.md](docs/quick_start_guide.md)** - Quick start
 - **[docs/global_specification.md](docs/global_specification.md)** - Full spec
 
