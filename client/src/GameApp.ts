@@ -194,11 +194,11 @@ export class GameApp {
   private async showWin(payload: any): Promise<void> {
     const { handCategory, payoutMultiplier, winningPositions } = payload;
     
-    // Highlight winning cards
+    // Highlight winning cards with tier-based animation
     if (winningPositions.length > 0) {
       const tier = getHandTier(payoutMultiplier);
       const color = this.getHandTierColor(tier);
-      this.boardView.highlightWinningCards(winningPositions, color);
+      this.boardView.highlightWinningCards(winningPositions, color, tier);
       
       // Wait for highlight
       await this.delay(500);
@@ -213,15 +213,15 @@ export class GameApp {
   }
   
   /**
-   * Get color for hand tier
+   * Get color for hand tier - dark theme
    */
   private getHandTierColor(tier: string): number {
     switch (tier) {
-      case 'JACKPOT': return 0xFFD700;
-      case 'BEST': return 0xFF1493;
-      case 'HIGH': return 0xFF4500;
-      case 'MEDIUM': return 0x9370DB;
-      default: return 0x4169E1;
+      case 'JACKPOT': return 0xFFD700; // Golden yellow
+      case 'BEST': return 0xCC0000;    // Dark red
+      case 'HIGH': return 0x8B0000;    // Darker red
+      case 'MEDIUM': return 0xFFFFFF;  // White
+      default: return 0xFFFFFF;        // White
     }
   }
   

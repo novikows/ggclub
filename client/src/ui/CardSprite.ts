@@ -29,6 +29,19 @@ export class CardSprite extends PIXI.Container {
   }
   
   /**
+   * Reset card to face down state
+   */
+  resetToFaceDown(): void {
+    this.isFaceUp = false;
+    if (this.cardBack) {
+      this.cardBack.visible = true;
+    }
+    if (this.cardFront) {
+      this.cardFront.visible = false;
+    }
+  }
+  
+  /**
    * Set card symbol and load texture
    */
   async setSymbol(symbol: Symbol): Promise<void> {
@@ -150,13 +163,33 @@ export class CardSprite extends PIXI.Container {
   }
   
   /**
-   * Pulse animation (for joker highlight)
+   * Enhanced pulse animation for Joker cards with golden glow
    */
   async pulse(duration: number = 600, pulses: number = 2): Promise<void> {
-    const pulseDuration = duration / pulses;
+    // Add golden glow for Joker
+    const jokerGlow = new PIXI.Graphics();
+    jokerGlow.name = 'jokerGlow';
+    this.addChildAt(jokerGlow, 0);
     
+    // Track if animation should stop
+    let shouldStopGlow = false;
+    
+    // Start glow animation
+    const totalDuration = duration * pulses;
+    this.animateJokerGlowControlled(jokerGlow, totalDuration, () => shouldStopGlow);
+    
+    // Pulse animation
+    const pulseDuration = duration / pulses;
     for (let i = 0; i < pulses; i++) {
       await this.animatePulse(pulseDuration);
+    }
+    
+    // Stop glow animation
+    shouldStopGlow = true;
+    
+    // Clean up glow immediately
+    if (this.children.includes(jokerGlow)) {
+      this.removeChild(jokerGlow);
     }
   }
   
@@ -164,20 +197,24 @@ export class CardSprite extends PIXI.Container {
     return new Promise(resolve => {
       const startTime = Date.now();
       const baseScale = 1;
-      const maxScale = 1.1;
+      const maxScale = 1.15;
       
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         
-        // Sin wave for smooth pulse
+        // Sin wave for smooth pulse with more amplitude
         const scale = baseScale + (maxScale - baseScale) * Math.sin(progress * Math.PI);
         this.scale.set(scale);
+        
+        // Add rotation for extra flair
+        this.rotation = Math.sin(progress * Math.PI) * 0.05;
         
         if (progress < 1) {
           requestAnimationFrame(animate);
         } else {
           this.scale.set(baseScale);
+          this.rotation = 0;
           resolve();
         }
       };
@@ -187,17 +224,88 @@ export class CardSprite extends PIXI.Container {
   }
   
   /**
-   * Highlight card (winning card)
+   * Animate golden glow for Joker - dark gold theme with stop control
    */
-  setHighlight(enabled: boolean, color: number = 0xFFD700): void {
-    if (enabled) {
-      // Add glow filter
-      const glow = new PIXI.Graphics();
-      glow.beginFill(color, 0.3);
-      glow.drawRoundedRect(-5, -5, this.width + 10, this.height + 10, 10);
+  private animateJokerGlowControlled(
+    glow: PIXI.Graphics, 
+    duration: number,
+    shouldStop: () => boolean
+  ): void {
+    const startTime = Date.now();
+    const goldColor = 0xFFD700; // Only golden yellow for Joker
+    const cardSize = this.getCardSize();
+    
+    const animate = () => {
+      // Stop if flag is set or glow is removed
+      if (shouldStop() || !this.children.includes(glow)) {
+        return;
+      }
+      
+      const elapsed = Date.now() - startTime;
+      if (elapsed > duration) return;
+      
+      const progress = (elapsed % 400) / 400;
+      
+      // Subtle pulsing effect
+      const alpha = 0.25 + Math.sin(progress * Math.PI * 2) * 0.15;
+      const scaleOffset = Math.sin(progress * Math.PI * 2) * 0.1;
+      
+      const glowWidth = cardSize.width + 20;
+      const glowHeight = cardSize.height + 20;
+      
+      glow.clear();
+      
+      // Single dark gold glow
+      glow.beginFill(goldColor, alpha);
+      glow.drawRoundedRect(
+        -glowWidth / 2 - scaleOffset * 10, 
+        -glowHeight / 2 - scaleOffset * 10, 
+        glowWidth + scaleOffset * 20, 
+        glowHeight + scaleOffset * 20, 
+        12
+      );
       glow.endFill();
+      
+      requestAnimationFrame(animate);
+    };
+    
+    animate();
+  }
+  
+  
+  /**
+   * Highlight card with tier-based animation intensity
+   */
+  setHighlight(enabled: boolean, color?: number, tier?: string): void {
+    // Set defaults
+    const highlightColor = color ?? 0xFFD700;
+    const highlightTier = tier ?? 'NORMAL';
+    
+    if (enabled) {
+      // Remove old highlight if exists
+      const oldHighlight = this.getChildByName('highlight');
+      if (oldHighlight) {
+        this.removeChild(oldHighlight);
+      }
+      
+      // Create animated glow
+      const glow = new PIXI.Graphics();
       glow.name = 'highlight';
       this.addChildAt(glow, 0);
+      
+      // Determine animation intensity
+      const isHighTier = highlightTier === 'JACKPOT' || highlightTier === 'BEST' || highlightTier === 'HIGH';
+      
+      // Flash effect only for high tier wins
+      if (isHighTier) {
+        this.animateFlashEffect(highlightColor);
+      }
+      
+      // Start continuous glow animation with tier-based intensity
+      this.animateHighlight(glow, highlightColor, highlightTier);
+      
+      // Bounce animation with tier-based intensity
+      this.animateBounce(highlightTier);
     } else {
       // Remove glow
       const highlight = this.getChildByName('highlight');
@@ -205,6 +313,187 @@ export class CardSprite extends PIXI.Container {
         this.removeChild(highlight);
       }
     }
+  }
+  
+  /**
+   * Initial flash effect when card is highlighted
+   */
+  private animateFlashEffect(color: number): void {
+    const flash = new PIXI.Graphics();
+    flash.name = 'flash';
+    this.addChildAt(flash, 0);
+    
+    const cardSize = this.getCardSize();
+    const startTime = Date.now();
+    const duration = 300;
+    
+    const animate = () => {
+      if (!this.children.includes(flash)) return;
+      
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Quick burst effect
+      const alpha = (1 - progress) * 0.6;
+      const scale = 1 + progress * 0.8;
+      
+      const flashWidth = cardSize.width + 20;
+      const flashHeight = cardSize.height + 20;
+      
+      flash.clear();
+      flash.beginFill(color, alpha);
+      flash.drawRoundedRect(
+        -flashWidth / 2 * scale, 
+        -flashHeight / 2 * scale, 
+        flashWidth * scale, 
+        flashHeight * scale, 
+        15
+      );
+      flash.endFill();
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        if (this.children.includes(flash)) {
+          this.removeChild(flash);
+        }
+      }
+    };
+    
+    animate();
+  }
+  
+  /**
+   * Animate highlight glow with tier-based intensity
+   */
+  private animateHighlight(glow: PIXI.Graphics, color: number, tier: string): void {
+    const startTime = Date.now();
+    const cardSize = this.getCardSize();
+    
+    // Tier-based settings
+    const isHighTier = tier === 'JACKPOT' || tier === 'BEST' || tier === 'HIGH';
+    const duration = isHighTier ? 1000 : 1500; // Faster for high tier
+    const baseAlpha = isHighTier ? 0.3 : 0.2;
+    const alphaRange = isHighTier ? 0.2 : 0.1;
+    const baseScale = isHighTier ? 0.15 : 0.08;
+    const glowPadding = isHighTier ? 16 : 12;
+    
+    const animate = () => {
+      if (!this.children.includes(glow)) return;
+      
+      const elapsed = Date.now() - startTime;
+      const progress = (elapsed % duration) / duration;
+      
+      // Pulsing effect
+      const alpha = baseAlpha + Math.sin(progress * Math.PI * 2) * alphaRange;
+      const scaleOffset = Math.sin(progress * Math.PI * 2) * baseScale;
+      
+      const glowWidth = cardSize.width + glowPadding;
+      const glowHeight = cardSize.height + glowPadding;
+      
+      glow.clear();
+      
+      if (isHighTier) {
+        // Double-layer glow for high tier
+        // Outer glow
+        glow.beginFill(color, alpha * 0.4);
+        glow.drawRoundedRect(
+          -glowWidth / 2 - scaleOffset * 12, 
+          -glowHeight / 2 - scaleOffset * 12, 
+          glowWidth + scaleOffset * 24, 
+          glowHeight + scaleOffset * 24, 
+          12
+        );
+        glow.endFill();
+        
+        // Inner glow for intensity
+        glow.beginFill(color, alpha * 0.6);
+        glow.drawRoundedRect(
+          -glowWidth / 2 - scaleOffset * 6, 
+          -glowHeight / 2 - scaleOffset * 6, 
+          glowWidth + scaleOffset * 12, 
+          glowHeight + scaleOffset * 12, 
+          10
+        );
+        glow.endFill();
+      } else {
+        // Single simple glow for low tier
+        glow.beginFill(color, alpha);
+        glow.drawRoundedRect(
+          -glowWidth / 2 - scaleOffset * 5, 
+          -glowHeight / 2 - scaleOffset * 5, 
+          glowWidth + scaleOffset * 10, 
+          glowHeight + scaleOffset * 10, 
+          10
+        );
+        glow.endFill();
+      }
+      
+      requestAnimationFrame(animate);
+    };
+    
+    animate();
+  }
+  
+  /**
+   * Bounce animation with tier-based intensity
+   */
+  private async animateBounce(tier: string = 'NORMAL'): Promise<void> {
+    const startY = this.position.y;
+    
+    // Tier-based settings
+    const isHighTier = tier === 'JACKPOT' || tier === 'BEST' || tier === 'HIGH';
+    const bounceHeight = isHighTier ? -25 : -12; // Higher bounce for high tier
+    const duration = isHighTier ? 600 : 400; // Longer for high tier
+    const scaleBoost = isHighTier ? 0.15 : 0.05; // More scale for high tier
+    const rotationAmount = isHighTier ? 0.08 : 0.03; // More rotation for high tier
+    
+    return new Promise(resolve => {
+      const startTime = Date.now();
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        let eased: number;
+        
+        if (isHighTier) {
+          // Multiple bounces for high tier
+          if (progress < 0.4) {
+            eased = Math.sin(progress * 2.5 * Math.PI) * 1.0;
+          } else if (progress < 0.7) {
+            eased = Math.sin((progress - 0.4) * 3.33 * Math.PI) * 0.5;
+          } else {
+            eased = Math.sin((progress - 0.7) * 3.33 * Math.PI) * 0.2;
+          }
+        } else {
+          // Simple single bounce for low tier
+          eased = Math.sin(progress * Math.PI);
+        }
+        
+        this.position.y = startY + bounceHeight * eased;
+        
+        // Scale pulse during bounce
+        const scale = 1 + Math.abs(eased) * scaleBoost;
+        this.scale.set(scale);
+        
+        // Rotation (only for high tier)
+        if (isHighTier) {
+          this.rotation = Math.sin(progress * Math.PI * 2) * rotationAmount;
+        }
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          this.position.y = startY;
+          this.scale.set(1);
+          this.rotation = 0;
+          resolve();
+        }
+      };
+      
+      animate();
+    });
   }
   
   /**

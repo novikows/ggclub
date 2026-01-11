@@ -12,15 +12,15 @@ export function getHandTier(multiplier: number): HandTier {
 }
 
 /**
- * Get hand tier color
+ * Get hand tier color - dark theme: gold, dark red, white only
  */
 export function getHandTierColor(tier: HandTier): number {
   switch (tier) {
-    case 'JACKPOT': return 0xFFD700; // Gold
-    case 'BEST': return 0xFF1493;    // Deep Pink
-    case 'HIGH': return 0xFF4500;    // Orange Red
-    case 'MEDIUM': return 0x9370DB;  // Medium Purple
-    case 'NORMAL': return 0x4169E1;  // Royal Blue
+    case 'JACKPOT': return 0xFFD700; // Golden yellow
+    case 'BEST': return 0xCC0000;    // Dark red
+    case 'HIGH': return 0x8B0000;    // Darker red
+    case 'MEDIUM': return 0xFFFFFF;  // White
+    case 'NORMAL': return 0xFFFFFF;  // White
   }
 }
 

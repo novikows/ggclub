@@ -127,18 +127,26 @@ export class BoardView extends PIXI.Container {
   }
   
   /**
-   * Highlight winning cards
+   * Highlight winning cards with tier-based animation intensity
    */
-  highlightWinningCards(positions: number[], color: number = 0xFFD700): void {
-    console.log('[BoardView] Highlighting positions:', positions);
+  highlightWinningCards(positions: number[], color?: number, tier?: string): void {
+    const highlightColor = color ?? 0xFFD700;
+    const highlightTier = tier ?? 'NORMAL';
+    console.log('[BoardView] Highlighting positions:', positions, 'tier:', highlightTier);
     
     // Clear all highlights first
     this.cards.forEach(card => card.setHighlight(false));
     
+    // Determine animation intensity based on tier
+    const isHighTier = highlightTier === 'JACKPOT' || highlightTier === 'BEST' || highlightTier === 'HIGH';
+    const delay = isHighTier ? 100 : 0; // Sequential for high tiers, instant for low
+    
     // Highlight winning cards
-    positions.forEach(pos => {
+    positions.forEach((pos, index) => {
       if (pos >= 0 && pos < 5) {
-        this.cards[pos].setHighlight(true, color);
+        setTimeout(() => {
+          this.cards[pos].setHighlight(true, highlightColor, highlightTier);
+        }, index * delay);
       }
     });
   }
@@ -151,12 +159,13 @@ export class BoardView extends PIXI.Container {
   }
   
   /**
-   * Reset board (hide all cards)
+   * Reset board (hide all cards and flip to face down)
    */
   reset(): void {
     this.cards.forEach(card => {
       card.alpha = 0;
       card.scale.set(0.5);
+      card.resetToFaceDown();
     });
     this.clearHighlights();
   }

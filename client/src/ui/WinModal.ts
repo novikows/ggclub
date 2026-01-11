@@ -16,6 +16,7 @@ export class WinModal extends PIXI.Container {
   private clickToContinueLabel: PIXI.Text;
   
   private onClose?: () => void;
+  private isShowing: boolean = false;
   
   constructor() {
     super();
@@ -26,9 +27,9 @@ export class WinModal extends PIXI.Container {
    * Initialize modal
    */
   init(): void {
-    // Dark overlay
+    // Darker overlay for better contrast
     this.overlay = new PIXI.Graphics();
-    this.overlay.beginFill(0x000000, 0.7);
+    this.overlay.beginFill(0x000000, 0.85);
     this.overlay.drawRect(0, 0, 800, 600);
     this.overlay.endFill();
     this.overlay.eventMode = 'static';
@@ -98,7 +99,7 @@ export class WinModal extends PIXI.Container {
   }
   
   /**
-   * Show win modal
+   * Show win modal with dark theme
    */
   async show(
     tier: HandTier,
@@ -106,34 +107,213 @@ export class WinModal extends PIXI.Container {
     multiplier: number,
     winAmount: number
   ): Promise<void> {
+    // Prevent double show
+    if (this.isShowing) {
+      console.log('[WinModal] Already showing, ignoring duplicate show call');
+      return;
+    }
+    
+    this.isShowing = true;
     const color = getHandTierColor(tier);
     
-    // Update panel
+    // Reset panel state
+    this.panel.scale.set(1);
+    this.panel.alpha = 1;
+    
+    // Update panel with very dark background
     this.panel.clear();
-    this.panel.beginFill(color, 0.9);
+    
+    // Very dark background (almost black)
+    this.panel.beginFill(0x0A0A0A, 0.98);
     this.panel.drawRoundedRect(-250, -200, 500, 400, 20);
     this.panel.endFill();
-    this.panel.lineStyle(4, 0xFFFFFF, 0.5);
+    
+    // Colored border based on tier
+    this.panel.lineStyle(6, color, 0.9);
     this.panel.drawRoundedRect(-250, -200, 500, 400, 20);
     
     // Update labels
     this.tierLabel.text = getHandTierLabel(tier);
-    this.tierLabel.style.fill = 0xFFFFFF;
+    this.tierLabel.style.fill = color; // Use tier color for tier label
     
     this.handLabel.text = formatHandCategory(handCategory);
+    this.handLabel.style.fill = 0xFFFFFF; // White
+    
     this.multiplierLabel.text = `x${multiplier.toFixed(multiplier >= 1 ? 1 : 2)}`;
+    this.multiplierLabel.style.fill = color; // Use tier color
+    
     this.winAmountLabel.text = `$${formatCurrency(winAmount)}`;
+    this.winAmountLabel.style.fill = color; // Use tier color
     
     // Show modal
     this.visible = true;
     this.alpha = 0;
     
-    // Fade in animation
-    await this.fadeIn(300);
+    // Set initial scale for slide-in animation
+    this.panel.scale.set(0.5);
+    this.panel.alpha = 0;
     
-    // Scale pulse animation for jackpot
-    if (tier === 'JACKPOT') {
+    // Fade in overlay
+    await this.fadeIn(200);
+    
+    // Slide and scale in panel
+    await this.slideInPanel();
+    
+    // Continuous pulse animation for jackpot and best wins
+    if (tier === 'JACKPOT' || tier === 'BEST') {
       this.animatePulse();
+      if (tier === 'JACKPOT') {
+        this.animateSparkles();
+      }
+    }
+  }
+  
+  /**
+   * Slide in panel animation
+   */
+  private slideInPanel(): Promise<void> {
+    return new Promise(resolve => {
+      const startTime = Date.now();
+      const duration = 400;
+      
+      // Store initial label positions
+      const tierInitialY = this.tierLabel.y;
+      const handInitialY = this.handLabel.y;
+      const multiplierInitialY = this.multiplierLabel.y;
+      const winAmountInitialY = this.winAmountLabel.y;
+      const clickInitialY = this.clickToContinueLabel.y;
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Ease out back for bouncy effect
+        const eased = progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        
+        this.panel.scale.set(0.5 + eased * 0.5);
+        this.panel.alpha = eased;
+        
+        // Slide all labels from their initial positions
+        const labelOffset = (1 - eased) * 50;
+        
+        this.tierLabel.alpha = eased;
+        this.tierLabel.y = tierInitialY + labelOffset;
+        
+        this.handLabel.alpha = eased;
+        this.handLabel.y = handInitialY + labelOffset;
+        
+        this.multiplierLabel.alpha = eased;
+        this.multiplierLabel.y = multiplierInitialY + labelOffset;
+        
+        this.winAmountLabel.alpha = eased;
+        this.winAmountLabel.y = winAmountInitialY + labelOffset;
+        
+        this.clickToContinueLabel.alpha = eased;
+        this.clickToContinueLabel.y = clickInitialY + labelOffset;
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // Reset to exact initial positions
+          this.panel.scale.set(1);
+          this.panel.alpha = 1;
+          this.tierLabel.y = tierInitialY;
+          this.handLabel.y = handInitialY;
+          this.multiplierLabel.y = multiplierInitialY;
+          this.winAmountLabel.y = winAmountInitialY;
+          this.clickToContinueLabel.y = clickInitialY;
+          resolve();
+        }
+      };
+      
+      animate();
+    });
+  }
+  
+  /**
+   * Add golden sparkles for jackpot wins
+   */
+  private animateSparkles(): void {
+    const goldColor = 0xFFD700;
+    
+    const createSparkle = () => {
+      if (!this.visible) return;
+      
+      const sparkle = new PIXI.Graphics();
+      sparkle.beginFill(goldColor);
+      // Draw a simple diamond/rhombus shape as sparkle
+      sparkle.moveTo(0, -6);
+      sparkle.lineTo(4, 0);
+      sparkle.lineTo(0, 6);
+      sparkle.lineTo(-4, 0);
+      sparkle.lineTo(0, -6);
+      sparkle.endFill();
+      
+      // Get panel center position
+      const panelCenterX = this.panel.x;
+      const panelCenterY = this.panel.y;
+      
+      // Random position around panel
+      const angle = Math.random() * Math.PI * 2;
+      const startRadius = 280 + Math.random() * 40;
+      const startX = panelCenterX + Math.cos(angle) * startRadius;
+      const startY = panelCenterY + Math.sin(angle) * startRadius;
+      
+      sparkle.position.set(startX, startY);
+      sparkle.alpha = 0;
+      this.addChild(sparkle);
+      
+      // Animate sparkle
+      const startTime = Date.now();
+      const duration = 1200;
+      
+      const animate = () => {
+        if (!this.visible || !this.children.includes(sparkle)) return;
+        
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Fade in and out
+        if (progress < 0.2) {
+          sparkle.alpha = progress / 0.2;
+        } else if (progress > 0.7) {
+          sparkle.alpha = (1 - progress) / 0.3;
+        } else {
+          sparkle.alpha = 0.8;
+        }
+        
+        // Move inward toward panel center
+        const currentRadius = startRadius * (1 - progress * 0.6);
+        sparkle.position.set(
+          panelCenterX + Math.cos(angle) * currentRadius,
+          panelCenterY + Math.sin(angle) * currentRadius
+        );
+        
+        sparkle.rotation = progress * Math.PI * 3;
+        sparkle.scale.set(0.8 + Math.sin(progress * Math.PI) * 0.4);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          if (this.children.includes(sparkle)) {
+            this.removeChild(sparkle);
+          }
+        }
+      };
+      
+      animate();
+      
+      // Create another sparkle
+      if (this.visible) {
+        setTimeout(createSparkle, 180);
+      }
+    };
+    
+    // Start creating sparkles
+    for (let i = 0; i < 3; i++) {
+      setTimeout(createSparkle, i * 120);
     }
   }
   
@@ -143,6 +323,7 @@ export class WinModal extends PIXI.Container {
   async hide(): Promise<void> {
     await this.fadeOut(200);
     this.visible = false;
+    this.isShowing = false; // Reset flag
     
     if (this.onClose) {
       this.onClose();
@@ -230,9 +411,9 @@ export class WinModal extends PIXI.Container {
    * Resize modal
    */
   resize(width: number, height: number): void {
-    // Resize overlay
+    // Resize overlay with darker tone
     this.overlay.clear();
-    this.overlay.beginFill(0x000000, 0.7);
+    this.overlay.beginFill(0x000000, 0.85);
     this.overlay.drawRect(0, 0, width, height);
     this.overlay.endFill();
     
