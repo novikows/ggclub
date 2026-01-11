@@ -99,7 +99,7 @@ export class WinModal extends PIXI.Container {
   }
   
   /**
-   * Show win modal with dark theme
+   * Show win modal with dark theme and smooth animation
    */
   async show(
     tier: HandTier,
@@ -116,10 +116,6 @@ export class WinModal extends PIXI.Container {
     this.isShowing = true;
     const color = getHandTierColor(tier);
     
-    // Reset panel state
-    this.panel.scale.set(1);
-    this.panel.alpha = 1;
-    
     // Update panel with very dark background
     this.panel.clear();
     
@@ -134,30 +130,32 @@ export class WinModal extends PIXI.Container {
     
     // Update labels
     this.tierLabel.text = getHandTierLabel(tier);
-    this.tierLabel.style.fill = color; // Use tier color for tier label
+    this.tierLabel.style.fill = color;
     
     this.handLabel.text = formatHandCategory(handCategory);
-    this.handLabel.style.fill = 0xFFFFFF; // White
+    this.handLabel.style.fill = 0xFFFFFF;
     
     this.multiplierLabel.text = `x${multiplier.toFixed(multiplier >= 1 ? 1 : 2)}`;
-    this.multiplierLabel.style.fill = color; // Use tier color
+    this.multiplierLabel.style.fill = color;
     
     this.winAmountLabel.text = `$${formatCurrency(winAmount)}`;
-    this.winAmountLabel.style.fill = color; // Use tier color
+    this.winAmountLabel.style.fill = color;
     
-    // Show modal
+    // Set initial state - everything invisible
     this.visible = true;
     this.alpha = 0;
     
-    // Set initial scale for slide-in animation
-    this.panel.scale.set(0.5);
+    // Set initial animation state for all elements
+    this.panel.scale.set(0.7);
     this.panel.alpha = 0;
+    this.tierLabel.alpha = 0;
+    this.handLabel.alpha = 0;
+    this.multiplierLabel.alpha = 0;
+    this.winAmountLabel.alpha = 0;
+    this.clickToContinueLabel.alpha = 0;
     
-    // Fade in overlay
-    await this.fadeIn(200);
-    
-    // Slide and scale in panel
-    await this.slideInPanel();
+    // Smooth fade in with scale
+    await this.animateModalIn();
     
     // Continuous pulse animation for jackpot and best wins
     if (tier === 'JACKPOT' || tier === 'BEST') {
@@ -169,61 +167,49 @@ export class WinModal extends PIXI.Container {
   }
   
   /**
-   * Slide in panel animation
+   * Smooth modal appearance animation
    */
-  private slideInPanel(): Promise<void> {
+  private animateModalIn(): Promise<void> {
     return new Promise(resolve => {
       const startTime = Date.now();
-      const duration = 400;
-      
-      // Store initial label positions
-      const tierInitialY = this.tierLabel.y;
-      const handInitialY = this.handLabel.y;
-      const multiplierInitialY = this.multiplierLabel.y;
-      const winAmountInitialY = this.winAmountLabel.y;
-      const clickInitialY = this.clickToContinueLabel.y;
+      const duration = 500;
       
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         
-        // Ease out back for bouncy effect
-        const eased = progress < 0.5
-          ? 2 * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        // Smooth ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
         
-        this.panel.scale.set(0.5 + eased * 0.5);
+        // Fade in overlay
+        this.alpha = eased;
+        
+        // Scale and fade panel
+        this.panel.scale.set(0.7 + eased * 0.3);
         this.panel.alpha = eased;
         
-        // Slide all labels from their initial positions
-        const labelOffset = (1 - eased) * 50;
+        // Fade in all labels with slight delay
+        const labelDelay = 0.2;
+        const labelProgress = Math.max(0, (progress - labelDelay) / (1 - labelDelay));
         
-        this.tierLabel.alpha = eased;
-        this.tierLabel.y = tierInitialY + labelOffset;
-        
-        this.handLabel.alpha = eased;
-        this.handLabel.y = handInitialY + labelOffset;
-        
-        this.multiplierLabel.alpha = eased;
-        this.multiplierLabel.y = multiplierInitialY + labelOffset;
-        
-        this.winAmountLabel.alpha = eased;
-        this.winAmountLabel.y = winAmountInitialY + labelOffset;
-        
-        this.clickToContinueLabel.alpha = eased;
-        this.clickToContinueLabel.y = clickInitialY + labelOffset;
+        this.tierLabel.alpha = labelProgress;
+        this.handLabel.alpha = labelProgress;
+        this.multiplierLabel.alpha = labelProgress;
+        this.winAmountLabel.alpha = labelProgress;
+        this.clickToContinueLabel.alpha = labelProgress;
         
         if (progress < 1) {
           requestAnimationFrame(animate);
         } else {
-          // Reset to exact initial positions
+          // Ensure final state
+          this.alpha = 1;
           this.panel.scale.set(1);
           this.panel.alpha = 1;
-          this.tierLabel.y = tierInitialY;
-          this.handLabel.y = handInitialY;
-          this.multiplierLabel.y = multiplierInitialY;
-          this.winAmountLabel.y = winAmountInitialY;
-          this.clickToContinueLabel.y = clickInitialY;
+          this.tierLabel.alpha = 1;
+          this.handLabel.alpha = 1;
+          this.multiplierLabel.alpha = 1;
+          this.winAmountLabel.alpha = 1;
+          this.clickToContinueLabel.alpha = 1;
           resolve();
         }
       };
@@ -318,10 +304,10 @@ export class WinModal extends PIXI.Container {
   }
   
   /**
-   * Hide modal
+   * Hide modal with smooth animation
    */
   async hide(): Promise<void> {
-    await this.fadeOut(200);
+    await this.animateModalOut();
     this.visible = false;
     this.isShowing = false; // Reset flag
     
@@ -331,17 +317,23 @@ export class WinModal extends PIXI.Container {
   }
   
   /**
-   * Fade in animation
+   * Smooth modal disappearance animation
    */
-  private fadeIn(duration: number): Promise<void> {
+  private animateModalOut(): Promise<void> {
     return new Promise(resolve => {
       const startTime = Date.now();
+      const duration = 300;
       
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         
-        this.alpha = progress;
+        // Smooth ease in cubic
+        const eased = progress * progress * progress;
+        
+        // Fade out and scale down
+        this.alpha = 1 - eased;
+        this.panel.scale.set(1 - eased * 0.2);
         
         if (progress < 1) {
           requestAnimationFrame(animate);
@@ -355,49 +347,29 @@ export class WinModal extends PIXI.Container {
   }
   
   /**
-   * Fade out animation
-   */
-  private fadeOut(duration: number): Promise<void> {
-    return new Promise(resolve => {
-      const startTime = Date.now();
-      
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        this.alpha = 1 - progress;
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          resolve();
-        }
-      };
-      
-      animate();
-    });
-  }
-  
-  /**
-   * Pulse animation for jackpot
+   * Pulse animation for jackpot - starts after main animation
    */
   private animatePulse(): void {
-    const startTime = Date.now();
-    const duration = 1000;
-    
-    const animate = () => {
-      if (!this.visible) return;
+    // Wait a bit for main animation to complete
+    setTimeout(() => {
+      const startTime = Date.now();
+      const duration = 1500;
       
-      const elapsed = Date.now() - startTime;
-      const progress = (elapsed % duration) / duration;
+      const animate = () => {
+        if (!this.visible || !this.isShowing) return;
+        
+        const elapsed = Date.now() - startTime;
+        const progress = (elapsed % duration) / duration;
+        
+        // Subtle pulse
+        const scale = 1 + Math.sin(progress * Math.PI * 2) * 0.03;
+        this.panel.scale.set(scale);
+        
+        requestAnimationFrame(animate);
+      };
       
-      const scale = 1 + Math.sin(progress * Math.PI * 2) * 0.05;
-      this.panel.scale.set(scale);
-      
-      requestAnimationFrame(animate);
-    };
-    
-    animate();
+      animate();
+    }, 500); // Start after main animation
   }
   
   /**
