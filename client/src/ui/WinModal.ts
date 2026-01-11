@@ -17,6 +17,7 @@ export class WinModal extends PIXI.Container {
   
   private onClose?: () => void;
   private isShowing: boolean = false;
+  private sparkles: PIXI.Graphics[] = []; // Track sparkle particles for cleanup
   
   constructor() {
     super();
@@ -99,6 +100,20 @@ export class WinModal extends PIXI.Container {
   }
   
   /**
+   * Clear all sparkle particles
+   */
+  private clearSparkles(): void {
+    // Remove all sparkles from the display
+    for (const sparkle of this.sparkles) {
+      if (this.children.includes(sparkle)) {
+        this.removeChild(sparkle);
+      }
+    }
+    // Clear the array
+    this.sparkles = [];
+  }
+  
+  /**
    * Show win modal with dark theme and smooth animation
    */
   async show(
@@ -112,6 +127,9 @@ export class WinModal extends PIXI.Container {
       console.log('[WinModal] Already showing, ignoring duplicate show call');
       return;
     }
+    
+    // Clear any leftover sparkles from previous show
+    this.clearSparkles();
     
     this.isShowing = true;
     const color = getHandTierColor(tier);
@@ -160,9 +178,11 @@ export class WinModal extends PIXI.Container {
     // Continuous pulse animation for jackpot and best wins
     if (tier === 'JACKPOT' || tier === 'BEST') {
       this.animatePulse();
-      if (tier === 'JACKPOT') {
-        this.animateSparkles();
-      }
+    }
+    
+    // Sparkles animation for wins greater than x1
+    if (multiplier > 1) {
+      this.animateSparkles();
     }
   }
   
@@ -219,7 +239,7 @@ export class WinModal extends PIXI.Container {
   }
   
   /**
-   * Add golden sparkles for jackpot wins
+   * Add golden sparkles animation
    */
   private animateSparkles(): void {
     const goldColor = 0xFFD700;
@@ -250,6 +270,9 @@ export class WinModal extends PIXI.Container {
       sparkle.position.set(startX, startY);
       sparkle.alpha = 0;
       this.addChild(sparkle);
+      
+      // Track sparkle for cleanup
+      this.sparkles.push(sparkle);
       
       // Animate sparkle
       const startTime = Date.now();
@@ -285,6 +308,11 @@ export class WinModal extends PIXI.Container {
         } else {
           if (this.children.includes(sparkle)) {
             this.removeChild(sparkle);
+            // Remove from tracking array
+            const index = this.sparkles.indexOf(sparkle);
+            if (index > -1) {
+              this.sparkles.splice(index, 1);
+            }
           }
         }
       };
@@ -307,6 +335,9 @@ export class WinModal extends PIXI.Container {
    * Hide modal with smooth animation
    */
   async hide(): Promise<void> {
+    // Clean up all sparkle particles
+    this.clearSparkles();
+    
     await this.animateModalOut();
     this.visible = false;
     this.isShowing = false; // Reset flag
