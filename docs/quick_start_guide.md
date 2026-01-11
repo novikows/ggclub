@@ -24,7 +24,7 @@ pokerspin/
 │   └── public/
 │       └── assets/
 │           ├── cards/          # 52 cards + JOKER.png + BACK.png
-│           └── background.jpg  # Static background (video later)
+│           └── background.png  # Static background (video later)
 ├── docs/
 │   ├── global_specification.md      # MAIN SPEC (read this!)
 │   ├── state_machine_brief.md       # State machine questions

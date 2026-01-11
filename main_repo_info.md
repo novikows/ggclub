@@ -323,7 +323,7 @@ main.ts
 * **Layout structure:**
 
   * **Background:**
-    * **MVP:** Static image (`/client/public/assets/background.jpg`)
+    * **MVP:** Static image (`/client/public/assets/background.png`)
     * **Future:** Will be replaced with video background (looping ambient video)
   
   * **Top header:** 
@@ -860,7 +860,7 @@ All card assets are located in `/client/public/assets/cards/`:
 **Card dimensions:** (to be measured from actual PNG files)
 
 **Background:**
-* `/client/public/assets/background.jpg` – static placeholder
+* `/client/public/assets/background.png` – static placeholder
 * **Future:** Will be replaced with video background
 
 ---
