@@ -1,22 +1,26 @@
 # 🎰 Joker Poker Board
 
-Casino poker game with Joker wild cards, built for Stake Engine RGS platform.
+Casino poker game with Joker wild cards, built for **Stake Engine** platform.
 
 ## 📦 Project Structure
 
 ```
 pokerspin/
-├── client/          # Frontend (PixiJS + TypeScript)
-├── docs/            # Documentation
+├── client/          # Frontend (PixiJS + TypeScript) ✅ COMPLETE
+├── docs/            # Original documentation
 │   ├── quick_start_guide.md
 │   ├── global_specification.md
 │   └── state_machine_brief.md
-└── server/          # Backend (Stake Engine Math - TODO)
+├── packages/        # Monorepo (future)
+│   ├── client/      # Frontend
+│   ├── shared/      # Shared types
+│   └── math-sdk/    # Stake Math SDK (Python)
+└── [Stake Engine Specs] # Integration docs ⭐
 ```
 
 ## 🚀 Quick Start
 
-### Client (MVP with Mock RGS)
+### Current: MVP v1.0 with Mock (Working Now!)
 
 ```bash
 cd client
@@ -24,13 +28,13 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000
+**Open:** http://localhost:3000 🎮
 
-### Current Status
+### Status
 
-✅ **Completed - MVP v1.0**
+✅ **MVP v1.0 Complete**
 - Full client implementation with PixiJS
-- Mock RGS API with 15 game scenarios
+- Mock RGS with 15 game scenarios
 - State machine (INIT → IDLE → SPINNING → WIN)
 - Card animations (flop → turn → river)
 - Joker transformation effects
@@ -38,11 +42,47 @@ Open http://localhost:3000
 - Responsive mobile-first UI
 - Bet controls (9 levels)
 
-🔜 **Next Phase**
-- Real Stake Engine RGS integration
-- Sound effects (card flip, win sounds)
-- Paytable & info modals
-- Backend math implementation
+🔄 **Next: Stake Engine Integration (3 weeks)**
+
+#### Week 1: Math SDK (Python)
+- Setup Stake Math SDK
+- Implement Joker Poker game logic
+- Generate 10M outcomes
+- Upload to Stake Engine
+
+#### Week 2: Frontend Integration
+- Install `stake-engine` npm package
+- Replace mock with real client
+- Add event listeners
+- Testing
+
+#### Week 3: Production Deploy
+- Build for production
+- Upload to Stake CDN
+- QA testing
+- Launch! 🚀
+
+---
+
+## 📚 Documentation
+
+### 🌟 Start Here:
+
+**For Stake Engine Integration:**
+1. **[STAKE_ENGINE_IMPLEMENTATION.md](STAKE_ENGINE_IMPLEMENTATION.md)** ⭐ **READ FIRST!**
+2. **[STAKE_MATH_SDK_GUIDE.md](STAKE_MATH_SDK_GUIDE.md)** - Python Math SDK
+3. **[STAKE_CLIENT_INTEGRATION.md](STAKE_CLIENT_INTEGRATION.md)** - TypeScript Client
+4. **[STAKE_ENGINE_SUMMARY.md](STAKE_ENGINE_SUMMARY.md)** - Complete Summary
+5. **[NEXT_STEPS_STAKE_ENGINE.md](NEXT_STEPS_STAKE_ENGINE.md)** - Implementation Plan
+
+**Current MVP:**
+- **[START_HERE.md](START_HERE.md)** - MVP Overview
+- **[client/README.md](client/README.md)** - Client docs
+- **[client/TESTING.md](client/TESTING.md)** - Test guide
+
+**Original Specs:**
+- **[docs/quick_start_guide.md](docs/quick_start_guide.md)** - Quick start
+- **[docs/global_specification.md](docs/global_specification.md)** - Full spec
 
 ## 🎮 Features
 
