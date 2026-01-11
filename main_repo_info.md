@@ -19,7 +19,7 @@
 * All possible game outcomes per mode are pre-generated and uploaded; /play selects a simulation based on weighting and returns event stream describing the round. ([Stake Engine][1])
 
 **Core fantasy:**
-Player bets, 5 poker cards are dealt to the board in one spin (5-card board only). Frontend animates them as “flop → turn → river” with delays for dopamine effects. Hand strength determines payout. Jokers act as multipliers and trigger turbo re-spins of specific board positions.
+Player bets, 5 poker cards are dealt to the board in one spin (5-card board only). Frontend animates them as "flop → turn → river" with delays for dopamine effects. Hand strength determines payout. Jokers act as wild cards, transforming into the best card to maximize the winning combination.
 
 ---
 
@@ -40,7 +40,7 @@ Player bets, 5 poker cards are dealt to the board in one spin (5-card board only
 
    * Show initial board (all 5 card identities are known from events).
    * Animate them as **flop → turn → river** (3 + 1 + 1 reveal timing).
-   * Apply **Joker effects** and any re-spin sequences.
+   * Apply **Joker transformation** (joker becomes the best card for winning hand).
    * Highlight winning cards and display win modal.
 5. For `totalWin > 0`, frontend calls `/wallet/end-round` to finalize win and update balance. ([Stake Engine][3])
 
@@ -48,16 +48,16 @@ Player bets, 5 poker cards are dealt to the board in one spin (5-card board only
 
 **Deck:**
 
-* Standard 52-card deck **plus Joker(s)**.
+* Standard 52-card deck **plus 2 Jokers** (maximum 2 jokers can appear on the board).
 * Each symbol encoded by **symbol name** in math config, e.g.:
 
   * `AS` – Ace of Spades, `KD` – King of Diamonds, etc.
-  * `JOK` – Joker card.
+  * `JOK` – Joker card (acts as Wild card).
 
 **Symbol configuration (math side):**
 
-* All card ranks (2–A) treated as **paying symbols**; Jokers treated as **special symbols** with attributes (e.g. multiplier flags). ([Stake Engine][4])
-* `config.special_symbols` includes joker mapping, e.g. `{"joker": ["JOK"]}` to mark special cards and enable joker-specific logic. ([Stake Engine][4])
+* All card ranks (2–A) treated as **paying symbols**; Jokers treated as **wild symbols** (can substitute for any card). ([Stake Engine][4])
+* `config.special_symbols` includes joker mapping, e.g. `{"joker": ["JOK"]}` to mark wild cards and enable substitution logic. ([Stake Engine][4])
 
 **Board:**
 
@@ -103,65 +103,37 @@ Frontend maps `totalWinMultiplier` → `HandTier` and uses `handCategory` for te
 
 ---
 
-# 3. Joker & Turbo Spin Mechanics
+# 3. Joker Mechanics
 
 ## 3.1 Joker behavior
 
-* **Joker is a special card** symbol (`JOK`) which:
+* **Joker is a Wild card** symbol (`JOK`) which:
 
-  1. Acts as a **win multiplier** (exact value and stacking handled by math).
-  2. Triggers **turbo re-spins** of specific board positions.
+  1. Acts as **any card** needed to create the **best possible winning combination** from the 5-card board.
+  2. Maximum **2 Jokers** can appear on the board in a single round.
 
-Math side uses symbol attributes (e.g. `multiplier`) to apply additional multipliers via standard multiplier strategy. ([Stake Engine][4])
+**Math side:**
 
-Frontend only needs to read from event:
+* Math engine evaluates all possible card substitutions for joker(s) and selects the combination with the highest payout multiplier. ([Stake Engine][4])
+* `config.special_symbols` includes joker mapping: `{"joker": ["JOK"]}` to mark it as wild card. ([Stake Engine][4])
+
+**Frontend behavior:**
+
+* Initially, joker is revealed as `JOK` card.
+* **After the river card is revealed**, joker(s) visually transform into the target card(s) via flip animation.
+* The transformation target is provided by the math engine in the `hand_result` event.
+
+Frontend reads from event:
 
 ```json
 {
-  "type": "joker_summary",
-  "jokerCount": 2,
-  "jokerPositions": [{ "index": 1 }, { "index": 4 }],
-  "respins": {
-    "mode": "TURN_RIVER", // "RIVER" | "TURN_RIVER" | "FULL_BOARD"
-    "times": 2
-  }
+  "type": "joker_transform",
+  "jokerTransforms": [
+    { "position": 1, "targetSymbol": "AS" },
+    { "position": 4, "targetSymbol": "AS" }
+  ]
 }
 ```
-
-## 3.2 Turbo re-spin specification
-
-Given a **board of 5 cards** indexed `0..4`:
-
-* We visually treat:
-
-  * `0,1,2` → “flop”
-  * `3` → “turn”
-  * `4` → “river”
-
-**Re-spin rules:**
-
-1. **1 Joker on board**
-
-   * Respins: **River only**
-   * Number of re-spins: **1**
-   * Cards at index `4` are re-drawn (math side generates separate reveal events for each re-spin).
-
-2. **2 Jokers on board**
-
-   * Respins: **Turn and River**
-   * Number of sequential re-spins: **2**
-   * Cards at indices `3` and `4` are re-drawn on each re-spin step.
-
-3. **3 Jokers on board**
-
-   * Respins: **Full board turbo**
-   * Number of re-spins: **5**
-   * All 5 cards (`0..4`) are re-drawn on each step.
-
-**Important:**
-
-* All re-spins are part of **one round** (single `/play` call). Stake math engine precomputes the full sequence of board states and win updates as a chain of events.
-* Final payout multiplier is based on the **final board** and applied jokers.
 
 ---
 
@@ -196,47 +168,40 @@ For this game, we define a minimal custom event schema:
      * Stores the full 5-card board.
      * Animates them as flop(0,1,2) → turn(3) → river(4) with delays.
 
-2. **`joker_summary`** (optional)
+2. **`joker_transform`** (optional)
 
-   * Emitted if there is at least one Joker.
-   * Describes count and respin behavior (as in §3.1).
-   * Used for UI copy and planning re-spin sequence.
-
-3. **`reveal_respin_step`** (0–5 times, depending on jokers)
-
-   * For each re-spin step.
+   * Emitted if there is at least one Joker on the board.
+   * Describes which jokers transform into which cards.
    * Payload:
 
      ```json
      {
        "index": 1,
-       "type": "reveal_respin_step",
-       "step": 1,
-       "affectedPositions": [3, 4],
-       "newSymbols": [
-         { "symbol": "QH" },
-         { "symbol": "JOK" }
+       "type": "joker_transform",
+       "jokerTransforms": [
+         { "position": 1, "targetSymbol": "AS" },
+         { "position": 4, "targetSymbol": "AS" }
        ]
      }
      ```
    * Frontend:
 
-     * Animates flip on specified indices.
-     * Updates current board array.
+     * Animates joker(s) flipping to target card(s).
+     * Updates board display.
 
-4. **`hand_result`**
+3. **`hand_result`**
 
    * Logical final state of the board and pay.
    * Payload:
 
      ```json
      {
-       "index": 6,
+       "index": 2,
        "type": "hand_result",
        "handCategory": "FOUR_OF_A_KIND",
        "payoutMultiplier": 12.0,
        "winningPositions": [0, 1, 2, 3],
-       "jackpot": true
+       "jackpot": false
      }
      ```
    * Frontend:
@@ -270,9 +235,9 @@ For this game, we define a minimal custom event schema:
 
 Stake Engine represents money as integers with 6 decimal places. For example: `1.0` → `1000000`; `0.1` → `100000`. ([Stake Engine][2])
 
-MVP target bet levels (as per your list):
+MVP target bet levels:
 
-* 0.1, 0.5, 1, 2, 5, 10, 50, 100, 500, 1000
+* 0.1, 0.5, 1, 5, 10, 50, 100, 500, 1000
 
 In RGS config, `betLevels` must be specified in integer units, e.g.:
 
@@ -281,7 +246,6 @@ In RGS config, `betLevels` must be specified in integer units, e.g.:
   100000,      // 0.1
   500000,      // 0.5
   1000000,     // 1
-  2000000,     // 2
   5000000,     // 5
   10000000,    // 10
   50000000,    // 50
@@ -297,15 +261,7 @@ Frontend:
 * Filters UI bet buttons to intersection of:
 
   * Provided `betLevels`.
-  * The target set `[0.1, 0.5, 1, 2, 5, 10, 50, 100, 500, 1000]` (converted to engine units).
-
-## 5.2 Turbo spin flag
-
-* Stake Engine supports jurisdiction flags such as `disabledTurbo`. ([Stake Engine][2])
-* Frontend:
-
-  * If `config.jurisdiction.disabledTurbo === true`, hide turbo toggle.
-  * Otherwise, show **Turbo mode** (instant animations, minimal delays).
+  * The target set `[0.1, 0.5, 1, 5, 10, 50, 100, 500, 1000]` (converted to engine units).
 
 ---
 
@@ -327,8 +283,8 @@ Frontend:
 * **PixiJS Layers:**
 
   * `BackgroundLayer`
-  * `BoardLayer` – card sprites, joker highlights.
-  * `UILayer` – bet controls, spin/turbo buttons, balance text.
+  * `BoardLayer` – card sprites, joker transformation animations.
+  * `UILayer` – bet controls, play button, balance/win/bet text, max win display, info/sound/paytable buttons.
   * `ModalLayer` – animated win modals.
 
 ## 6.2 Project structure (MVP)
@@ -340,12 +296,15 @@ src/
   game/
     GameState.ts        // FSM state, bet amount, current board, current events
     EventProcessor.ts   // map RGS events to visual actions
-    JokerLogic.ts       // helper for local joker counting, if needed
+    JokerLogic.ts       // helper for joker transformation logic
   ui/
     BoardView.ts        // PixiJS container for cards & animations
-    ControlsView.ts     // bet buttons, spin, turbo
+    ControlsView.ts     // bet buttons, play button
     WinModal.ts         // tier-based modal
-    PaytableView.ts     // static for now
+    PaytableView.ts     // paytable modal
+    InfoView.ts         // info/rules modal
+    HeaderView.ts       // max win, balance, win, bet display
+    FooterView.ts       // controls + info/sound/paytable buttons
   assets/
     cards.png           // spritesheet
     ui.png
@@ -359,50 +318,78 @@ main.ts
 
 ## 7.1 Layout
 
-* **Orientation:** Landscape, 16:9 baseline.
-* **Above the fold:**
+* **Design approach:** **Mobile-first** – design for mobile, scale up for desktop (desktop = mobile layout at larger size).
+* **Orientation:** Portrait for mobile, landscape for desktop (optional).
+* **Layout structure:**
 
-  * Top: balance, current bet, last win.
-  * Center: 5-card board, horizontally centered.
-  * Bottom: bet +/- controls, bet level carousel, SPIN button, TURBO toggle, Sound, Info.
+  * **Background:**
+    * **MVP:** Static image (`/client/public/assets/background.jpg`)
+    * **Future:** Will be replaced with video background (looping ambient video)
+  
+  * **Top header:** 
+    * Maximum Win: **400,000** (fixed jackpot display, prominent)
+  
+  * **Center:** 
+    * 5-card board, horizontally centered
+    * Cards scale proportionally to screen size
+  
+  * **Bottom footer:**
+    * **Left section:** 
+      * Balance: `$XXX.XX`
+      * Win: `$XXX.XX` (shows last win)
+      * Bet: `$XXX.XX` (current bet amount)
+    
+    * **Center section:** 
+      * `-` button (decrease bet)
+      * Bet amount display (large, prominent)
+      * `+` button (increase bet)
+      * Large round **PLAY** button (center, primary action)
+    
+    * **Right section:** 
+      * Info button (game rules)
+      * Sound toggle button (on/off)
+      * Paytable button (show payout table)
 
 ## 7.2 Animation flow per round
 
-1. **Board entry:**
+**Default animation timing:** `300ms` for all transitions (MVP standard)
+
+1. **Board entry & card reveal:**
 
    * On `reveal_initial_board`:
 
-     * All 5 card backs appear instantly.
-     * Animate:
+     * **Step 1 - Flop (positions 0,1,2):**
+       * 3 cards appear face-down (card back).
+       * Pause (`300ms`).
+       * Card 0 flips face-up (`300ms`).
+       * Card 1 flips face-up (`300ms`).
+       * Card 2 flips face-up (`300ms`).
+     
+     * **Step 2 - Turn (position 3):**
+       * Card appears face-down.
+       * Pause (`300ms`).
+       * Card flips face-up (`300ms`).
+     
+     * **Step 3 - River (position 4):**
+       * Card appears face-down.
+       * Pause (`300ms`).
+       * Card flips face-up (`300ms`).
 
-       * Flop cards (0,1,2): flip face-up one-by-one (`~150–200ms` stagger).
-       * Small pause (`~200ms`).
-       * Turn (3): flip.
-       * Pause (`~200ms`).
-       * River (4): flip.
-   * In **Turbo mode**, all cards flip almost instantly (minimal delays).
+2. **Joker transformation:**
 
-2. **Joker presence:**
+   * On `joker_transform` (triggered **after river is revealed**):
 
-   * On `joker_summary`:
+     * Joker card(s) pulse/glow (`300ms`).
+     * Joker(s) flip to card back (`300ms`).
+     * Flip to target card with transformation effect (`300ms`).
+     * Display brief text: `"Joker transforms to Ace"` or similar.
 
-     * Pulse glow on Joker cards for a moment.
-     * Display small text: `"Joker x1 – River Respin"`, `"Joker x2 – Turn & River Respin x2"`, etc.
-
-3. **Re-spin steps:**
-
-   * For each `reveal_respin_step`:
-
-     * Flip affected positions back to card back, then to new face.
-     * Optional particle or arc line indicator on re-spun cards.
-     * Turbo mode: faster flip and no pause between steps.
-
-4. **Win highlight & modal:**
+3. **Win highlight & modal:**
 
    * On `hand_result`:
 
-     * Highlight `winningPositions` with outline / glow.
-     * Show text label (e.g. “FOUR OF A KIND – QUEENS”).
+     * Highlight `winningPositions` with outline / glow (`300ms` fade-in).
+     * Show text label (e.g. "FOUR OF A KIND – ACES").
      * Show win modal variant based on `HandTier`:
 
        * NORMAL / MEDIUM / HIGH / BEST / JACKPOT — different colors, size, and possibly background animation intensity.
@@ -411,7 +398,7 @@ main.ts
        * Hand name.
        * Multiplier (e.g. `x12.0`).
        * Win amount (converted to currency).
-   * On click anywhere or after timeout, modal closes and game returns to `IDLE`.
+   * On click anywhere or after timeout (`3000ms`), modal fades out and game returns to `IDLE`.
 
 ---
 
@@ -490,27 +477,393 @@ POST {{rgs_url}}/wallet/end-round
   * `/wallet/authenticate`, `/wallet/balance`, `/wallet/play`, `/wallet/end-round`.
 * Full JS/PixiJS HTML5 client:
 
-  * 5-card board rendering and animation.
-  * Joker + turbo re-spin animations (driven by events).
-  * Bet selection with fixed bet levels as specified.
-  * Turbo mode + disable via jurisdiction flag.
-  * 5 win modal tiers with different visuals.
-* Basic sound effects:
+  * 5-card board rendering and sequential card reveal animation (flop → turn → river).
+  * Joker wild card transformation animations (after river reveal).
+  * Bet selection with fixed bet levels: `0.1, 0.5, 1, 5, 10, 50, 100, 500, 1000`.
+  * Responsive layout (mobile & desktop).
+  * Max Win 400k display (fixed jackpot).
+  * 5 win modal tiers with different visuals (NORMAL, MEDIUM, HIGH, BEST, JACKPOT).
+  * Info, Sound, Paytable buttons and modals.
+* Basic sound effects (SFX only, NO MUSIC for MVP):
 
-  * Flip, win, jackpot (can be placeholder).
+  * Card flip sound (each card reveal)
+  * Button click sound (UI interactions)
+  * Win celebration sounds (different for each tier: NORMAL/MEDIUM/HIGH/BEST/JACKPOT)
+  * Joker transformation sound (special effect)
+  * Sound toggle in UI (on/off)
+  
 * Basic error handling:
 
-  * Insufficient balance (ERR_IPB), invalid session (ERR_IS), etc. ([Stake Engine][2])
+  * Insufficient balance (ERR_IPB)
+  * Invalid session (ERR_IS)
+  * Network errors, timeouts
+  * See Stake Engine documentation for complete error reference: [Stake Engine RGS][2]
+  * Reconnection logic: Refer to Stake Engine docs for round recovery and reconnection flow
+
+**Language support:**
+
+* **MVP:** English only
+* **Future:** Multi-language support (RU, etc.)
 
 **Deferred / out of scope for first MVP:**
 
-* Final, verified RTP and full paytable.
-* Mobile-specific UX polish beyond basic responsive layout.
-* Full localization (beyond EN / RU).
-* History view, settings, advanced auto-spin.
+* Final, verified RTP calculations.
+* Turbo mode / fast spin option.
+* Advanced mobile gestures (swipe to change bet, etc.).
+* Full localization (beyond EN).
+* History view, game settings, advanced auto-spin.
+* Dynamic jackpot calculation (Max Win 400k is static for now).
+* Background music (only SFX in MVP).
+* Video background (static image for MVP).
 
 ---
 
+# 10. TypeScript Type Definitions
+
+## 10.1 Core Types
+
+```typescript
+// ============================================================================
+// SYMBOL & CARD TYPES
+// ============================================================================
+
+/** Card rank: 2-10, J, Q, K, A */
+type CardRank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
+
+/** Card suit: Clubs, Diamonds, Hearts, Spades */
+type CardSuit = 'C' | 'D' | 'H' | 'S';
+
+/** Card symbol: e.g., "AS", "10H", "KC" */
+type CardSymbol = `${CardRank}${CardSuit}`;
+
+/** Symbol type including Joker */
+type Symbol = CardSymbol | 'JOKER';
+
+/** Symbol object from RGS */
+interface SymbolObject {
+  symbol: Symbol;
+}
+
+// ============================================================================
+// POKER HAND TYPES
+// ============================================================================
+
+/** Poker hand categories */
+type HandCategory = 
+  | 'HIGH_CARD'
+  | 'PAIR'
+  | 'TWO_PAIR'
+  | 'THREE_OF_A_KIND'
+  | 'STRAIGHT'
+  | 'FLUSH'
+  | 'FULL_HOUSE'
+  | 'FOUR_OF_A_KIND'
+  | 'STRAIGHT_FLUSH'
+  | 'ROYAL_FLUSH';
+
+/** Visual tier for win modal display */
+type HandTier = 'NORMAL' | 'MEDIUM' | 'HIGH' | 'BEST' | 'JACKPOT';
+
+// ============================================================================
+// RGS EVENT TYPES
+// ============================================================================
+
+/** Base event structure from Stake Engine */
+interface BaseEvent {
+  index: number;
+  type: string;
+}
+
+/** Event: Initial board reveal */
+interface RevealInitialBoardEvent extends BaseEvent {
+  type: 'reveal_initial_board';
+  board: SymbolObject[]; // Array of 5 symbols
+}
+
+/** Event: Joker transformation (optional) */
+interface JokerTransformEvent extends BaseEvent {
+  type: 'joker_transform';
+  jokerTransforms: Array<{
+    position: number; // 0-4
+    targetSymbol: Symbol;
+  }>;
+}
+
+/** Event: Final hand result */
+interface HandResultEvent extends BaseEvent {
+  type: 'hand_result';
+  handCategory: HandCategory;
+  payoutMultiplier: number;
+  winningPositions: number[]; // Array of indices 0-4
+  jackpot: boolean;
+}
+
+/** Event: Round summary (optional, for debug) */
+interface RoundSummaryEvent extends BaseEvent {
+  type: 'round_summary';
+  totalWin: number;
+  betAmount: number;
+  [key: string]: any; // Additional debug info
+}
+
+/** Union of all possible game events */
+type GameEvent = 
+  | RevealInitialBoardEvent 
+  | JokerTransformEvent 
+  | HandResultEvent 
+  | RoundSummaryEvent;
+
+// ============================================================================
+// RGS API TYPES
+// ============================================================================
+
+/** POST /wallet/authenticate request */
+interface AuthenticateRequest {
+  sessionID: string;
+}
+
+/** POST /wallet/authenticate response */
+interface AuthenticateResponse {
+  balance: number; // Integer with 6 decimal places (e.g., 1000000 = $1.00)
+  config: {
+    minBet: number;
+    maxBet: number;
+    stepBet: number;
+    betLevels: number[];
+    currency: string;
+    jurisdiction?: {
+      disabledTurbo?: boolean;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
+  sessionID: string;
+}
+
+/** POST /wallet/play request */
+interface PlayRequest {
+  sessionID: string;
+  amount: number; // Bet in engine units (e.g., 1000000 = $1.00)
+  mode: 'BASE'; // Game mode (MVP only has BASE)
+}
+
+/** POST /wallet/play response */
+interface PlayResponse {
+  balance: number; // Balance after bet deducted
+  round: {
+    id: string;
+    events: GameEvent[]; // Ordered array of events
+    [key: string]: any;
+  };
+}
+
+/** POST /wallet/end-round request */
+interface EndRoundRequest {
+  sessionID: string;
+}
+
+/** POST /wallet/end-round response */
+interface EndRoundResponse {
+  balance: number; // Balance after win credited
+}
+
+/** GET /wallet/balance response */
+interface BalanceResponse {
+  balance: number;
+}
+
+// ============================================================================
+// GAME STATE TYPES
+// ============================================================================
+
+/** Game FSM states */
+type GameState = 
+  | 'INIT' 
+  | 'IDLE' 
+  | 'SPINNING' 
+  | 'JOKER_TRANSFORM' 
+  | 'DISPLAYING_WIN' 
+  | 'ERROR';
+
+/** Current board state */
+interface BoardState {
+  cards: (Symbol | null)[]; // Array of 5 symbols (null = not revealed yet)
+  revealed: boolean[]; // Array of 5 booleans (true = face-up)
+}
+
+/** Game state manager */
+interface GameStateManager {
+  state: GameState;
+  balance: number;
+  currentBet: number;
+  lastWin: number;
+  board: BoardState;
+  currentEvents: GameEvent[];
+  sessionID: string | null;
+  config: AuthenticateResponse['config'] | null;
+}
+
+// ============================================================================
+// UI TYPES
+// ============================================================================
+
+/** Bet level in display units (e.g., 0.1, 1, 10) */
+type BetLevel = 0.1 | 0.5 | 1 | 5 | 10 | 50 | 100 | 500 | 1000;
+
+/** Sound state */
+interface SoundState {
+  enabled: boolean;
+  volume: number; // 0-1
+}
+
+/** Modal types */
+type ModalType = 'WIN' | 'INFO' | 'PAYTABLE' | 'ERROR' | null;
+
+// ============================================================================
+// ERROR TYPES
+// ============================================================================
+
+/** RGS error codes (see Stake Engine docs for complete list) */
+type RGSErrorCode = 
+  | 'ERR_IS'   // Invalid Session
+  | 'ERR_IPB'  // Insufficient Player Balance
+  | 'ERR_NETWORK' // Network/timeout error
+  | string;    // Other error codes from Stake Engine
+
+/** Error state */
+interface ErrorState {
+  code: RGSErrorCode;
+  message: string;
+  recoverable: boolean; // Can retry?
+}
+
+// ============================================================================
+// UTILITY TYPES
+// ============================================================================
+
+/** Convert engine units to display currency */
+function engineUnitsToDisplay(units: number): number {
+  return units / 1000000;
+}
+
+/** Convert display currency to engine units */
+function displayToEngineUnits(amount: number): number {
+  return Math.round(amount * 1000000);
+}
+
+/** Map multiplier to hand tier */
+function getHandTier(multiplier: number): HandTier {
+  if (multiplier >= 40) return 'JACKPOT';
+  if (multiplier > 10) return 'BEST';
+  if (multiplier > 3) return 'HIGH';
+  if (multiplier > 1.5) return 'MEDIUM';
+  return 'NORMAL';
+}
+```
+
+**Note:** For complete RGS API types and additional details, refer to [Stake Engine Documentation](https://stakeengine.github.io/math-sdk/rgs_docs/RGS/).
+
+---
+
+# 11. Poker Hand Rankings & Paytable
+
+## 11.1 Standard Poker Hand Hierarchy
+
+Poker hands ranked from lowest to highest:
+
+1. **High Card** – No pair, ranked by highest card only
+2. **Pair** – Two cards of the same rank
+3. **Two Pair** – Two different pairs
+4. **Three of a Kind (Set)** – Three cards of the same rank
+5. **Straight** – Five cards in sequential rank (any suit)
+6. **Flush** – Five cards of the same suit (any ranks)
+7. **Full House** – Three of a kind + a pair
+8. **Four of a Kind (Quad)** – Four cards of the same rank
+9. **Straight Flush** – Five cards in sequential rank AND same suit
+10. **Royal Flush** – A, K, Q, J, 10 all in the same suit (highest straight flush)
+
+## 11.2 Payout Table (Multipliers)
+
+| Hand Type | Rank Range | Multiplier | Hand Tier |
+|-----------|------------|------------|-----------|
+| High Card | JJ to AA | **x0.1** | NORMAL |
+| Pair | 2 to 10 | **x0.2** | NORMAL |
+| Pair | JJ to AA | **x0.4** | NORMAL |
+| Two Pair | 2 to 10 | **x0.4** | NORMAL |
+| Two Pair | JJ to AA | **x0.8** | NORMAL |
+| Set (Three of a Kind) | 2 to 10 | **x1.5** | MEDIUM |
+| Set (Three of a Kind) | JJ to AA | **x3** | HIGH |
+| Straight | Any | **x5** | HIGH |
+| Flush | Any | **x10** | JACKPOT |
+| Full House | Any | **x20** | JACKPOT |
+| Quad (Four of a Kind) | Any | **x40** | JACKPOT |
+| Straight Flush | Any | **x100** | JACKPOT |
+| Royal Flush | A-K-Q-J-10 same suit | **x1000** | JACKPOT |
+
+**Hand Tier Classification:**
+
+* **NORMAL:** x0.1 – x1.5 (includes High Card, Pairs, Two Pairs)
+* **MEDIUM:** >x1.5 – x3 (includes low Sets)
+* **HIGH:** >x3 – x10 (includes high Sets, Straight, Flush)
+* **BEST:** >x10 – x40 (includes Full House, Quad)
+* **JACKPOT:** >=x40 (includes top hands: Quad, Straight Flush, Royal Flush)
+
+**Notes:**
+
+* "JJ to AA" means face cards: Jack, Queen, King, Ace
+* "2 to 10" means numbered cards: 2, 3, 4, 5, 6, 7, 8, 9, 10
+* Jokers substitute to create the best possible hand
+* All payouts are **bet multipliers** (e.g., bet $10 with x40 = win $400)
+
+---
+
+# 12. Complete Symbol Reference
+
+## 12.1 Card Symbols (52 cards + 2 Jokers)
+
+**Standard 52-card deck encoding:**
+
+### Clubs (♣) - C
+`2C, 3C, 4C, 5C, 6C, 7C, 8C, 9C, 10C, JC, QC, KC, AC`
+
+### Diamonds (♦) - D
+`2D, 3D, 4D, 5D, 6D, 7D, 8D, 9D, 10D, JD, QD, KD, AD`
+
+### Hearts (♥) - H
+`2H, 3H, 4H, 5H, 6H, 7H, 8H, 9H, 10H, JH, QH, KH, AH`
+
+### Spades (♠) - S
+`2S, 3S, 4S, 5S, 6S, 7S, 8S, 9S, 10S, JS, QS, KS, AS`
+
+### Special Symbols
+`JOKER` – Wild card (substitutes for any card)
+
+**Total symbols:** 54 (52 cards + 1 Joker symbol type, max 2 on board)
+
+## 12.2 Asset Files Mapping
+
+All card assets are located in `/client/public/assets/cards/`:
+
+**Card faces:**
+* Pattern: `{RANK}{SUIT}.png`
+* Examples: `AS.png`, `10H.png`, `KC.png`
+* Total: 52 files
+
+**Special cards:**
+* `JOKER.png` – Joker card face
+* `BACK.png` – Card back (used when cards face-down)
+
+**Alternative designs (optional):**
+* Some cards have `*2.png` variants (e.g., `AS2.png`, `KC2.png`)
+* Use for variety or special effects if needed
+
+**Card dimensions:** (to be measured from actual PNG files)
+
+**Background:**
+* `/client/public/assets/background.jpg` – static placeholder
+* **Future:** Will be replaced with video background
+
+---
 
 [1]: https://stakeengine.github.io/math-sdk/ "Stake Development Kits"
 [2]: https://stakeengine.github.io/math-sdk/rgs_docs/RGS/ "RGS Technical Details - Stake Development Kits"
