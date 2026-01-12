@@ -16,7 +16,12 @@ export class GameApp {
   private stateManager: GameStateManager;
   
   // UI Components
-  private background: PIXI.Sprite | null = null;
+  private backgroundVideo: HTMLVideoElement | null = null;
+  private backgroundAudio: HTMLAudioElement | null = null;
+  private audioButton: PIXI.Container | null = null;
+  private audioButtonIcon: PIXI.Text | null = null;
+  private audioButtonStrike: PIXI.Graphics | null = null;
+  private isAudioPlaying: boolean = true;
   private boardView: BoardView;
   private controlsView: ControlsView;
   private winModal: WinModal;
@@ -26,7 +31,7 @@ export class GameApp {
     this.app = new PIXI.Application({
       width: window.innerWidth,
       height: window.innerHeight,
-      backgroundColor: 0x000000,
+      backgroundAlpha: 0,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
@@ -63,6 +68,9 @@ export class GameApp {
       // Load background
       await this.loadBackground();
       
+      // Load background audio
+      await this.loadBackgroundAudio();
+      
       // Initialize UI
       await this.initUI();
       
@@ -84,29 +92,156 @@ export class GameApp {
   }
   
   /**
-   * Load background image
+   * Load background video
    */
   private async loadBackground(): Promise<void> {
     try {
-      const texture = await PIXI.Assets.load('/assets/background.png');
-      this.background = new PIXI.Sprite(texture);
+      // Create video element
+      this.backgroundVideo = document.createElement('video');
+      this.backgroundVideo.src = '/assets/background_video.mp4';
+      this.backgroundVideo.loop = true;
+      this.backgroundVideo.muted = true;
+      this.backgroundVideo.autoplay = true;
+      this.backgroundVideo.playsInline = true;
       
-      // Scale to cover screen
-      const scale = Math.max(
-        this.app.screen.width / this.background.width,
-        this.app.screen.height / this.background.height
-      );
-      this.background.scale.set(scale);
+      // Style video to cover entire background
+      this.backgroundVideo.style.position = 'fixed';
+      this.backgroundVideo.style.top = '0';
+      this.backgroundVideo.style.left = '0';
+      this.backgroundVideo.style.width = '100%';
+      this.backgroundVideo.style.height = '100%';
+      this.backgroundVideo.style.objectFit = 'cover';
+      this.backgroundVideo.style.zIndex = '-1';
       
-      // Center
-      this.background.position.set(
-        (this.app.screen.width - this.background.width * scale) / 2,
-        (this.app.screen.height - this.background.height * scale) / 2
-      );
+      // Add to DOM before canvas
+      const app = document.getElementById('app');
+      if (app) {
+        app.insertBefore(this.backgroundVideo, app.firstChild);
+      }
       
-      this.app.stage.addChild(this.background);
+      // Start playing
+      await this.backgroundVideo.play();
+      
+      console.log('[GameApp] Background video loaded successfully');
     } catch (error) {
-      console.warn('[GameApp] Failed to load background, using solid color');
+      console.warn('[GameApp] Failed to load background video, using solid color:', error);
+    }
+  }
+
+  /**
+   * Load background audio
+   */
+  private async loadBackgroundAudio(): Promise<void> {
+    try {
+      // Create audio element
+      this.backgroundAudio = document.createElement('audio');
+      this.backgroundAudio.src = '/assets/background_audio.mp3';
+      this.backgroundAudio.loop = true;
+      this.backgroundAudio.volume = 0.3; // Set volume to 30%
+      this.backgroundAudio.autoplay = true;
+      
+      // Add to DOM
+      const app = document.getElementById('app');
+      if (app) {
+        app.appendChild(this.backgroundAudio);
+      }
+      
+      // Start playing
+      await this.backgroundAudio.play();
+      this.isAudioPlaying = true;
+      
+      console.log('[GameApp] Background audio loaded successfully');
+    } catch (error) {
+      console.warn('[GameApp] Failed to load background audio:', error);
+      this.isAudioPlaying = false;
+      // Audio autoplay might be blocked by browser, user interaction needed
+    }
+  }
+
+  /**
+   * Create audio toggle button
+   */
+  private createAudioButton(): void {
+    this.audioButton = new PIXI.Container();
+    
+    // Background circle
+    const bg = new PIXI.Graphics();
+    bg.beginFill(0x000000, 0.7);
+    bg.drawCircle(0, 0, 30);
+    bg.endFill();
+    bg.lineStyle(2, 0xFFFFFF, 0.5);
+    bg.drawCircle(0, 0, 30);
+    this.audioButton.addChild(bg);
+    
+    // Icon text (🎵 note)
+    this.audioButtonIcon = new PIXI.Text('🎵', {
+      fontFamily: 'Arial',
+      fontSize: 28,
+      fill: 0xFFFFFF,
+    });
+    this.audioButtonIcon.anchor.set(0.5);
+    this.audioButton.addChild(this.audioButtonIcon);
+    
+    // Strike-through line (shown when muted)
+    this.audioButtonStrike = new PIXI.Graphics();
+    this.audioButtonStrike.lineStyle(3, 0xFF0000, 1); // Red line
+    this.audioButtonStrike.moveTo(-20, -20);
+    this.audioButtonStrike.lineTo(20, 20);
+    this.audioButtonStrike.visible = !this.isAudioPlaying;
+    this.audioButton.addChild(this.audioButtonStrike);
+    
+    // Make interactive
+    this.audioButton.eventMode = 'static';
+    this.audioButton.cursor = 'pointer';
+    
+    // Add hover effect
+    this.audioButton.on('pointerover', () => {
+      bg.clear();
+      bg.beginFill(0x333333, 0.9);
+      bg.drawCircle(0, 0, 30);
+      bg.endFill();
+      bg.lineStyle(2, 0xFFFFFF, 0.8);
+      bg.drawCircle(0, 0, 30);
+    });
+    
+    this.audioButton.on('pointerout', () => {
+      bg.clear();
+      bg.beginFill(0x000000, 0.7);
+      bg.drawCircle(0, 0, 30);
+      bg.endFill();
+      bg.lineStyle(2, 0xFFFFFF, 0.5);
+      bg.drawCircle(0, 0, 30);
+    });
+    
+    // Add click handler
+    this.audioButton.on('pointerdown', () => this.toggleAudio());
+    
+    this.app.stage.addChild(this.audioButton);
+  }
+
+  /**
+   * Toggle audio on/off
+   */
+  private toggleAudio(): void {
+    if (!this.backgroundAudio) return;
+    
+    if (this.isAudioPlaying) {
+      this.backgroundAudio.pause();
+      this.isAudioPlaying = false;
+      if (this.audioButtonStrike) {
+        this.audioButtonStrike.visible = true; // Show strike-through
+      }
+      console.log('[GameApp] Audio paused');
+    } else {
+      this.backgroundAudio.play().then(() => {
+        this.isAudioPlaying = true;
+        if (this.audioButtonStrike) {
+          this.audioButtonStrike.visible = false; // Hide strike-through
+        }
+        console.log('[GameApp] Audio playing');
+      }).catch(error => {
+        console.warn('[GameApp] Failed to play audio:', error);
+      });
     }
   }
   
@@ -129,6 +264,9 @@ export class GameApp {
     this.winModal.init();
     this.winModal.setCloseHandler(() => this.onWinModalClose());
     this.app.stage.addChild(this.winModal);
+    
+    // Create audio button
+    this.createAudioButton();
     
     // Layout
     this.resize();
@@ -269,17 +407,11 @@ export class GameApp {
     // Resize app
     this.app.renderer.resize(width, height);
     
-    // Resize background
-    if (this.background) {
-      const scale = Math.max(
-        width / this.background.texture.width,
-        height / this.background.texture.height
-      );
-      this.background.scale.set(scale);
-      this.background.position.set(
-        (width - this.background.texture.width * scale) / 2,
-        (height - this.background.texture.height * scale) / 2
-      );
+    // Background video resizes automatically via CSS
+    
+    // Position audio button (top right corner)
+    if (this.audioButton) {
+      this.audioButton.position.set(width - 50, 50);
     }
     
     // Resize UI components
