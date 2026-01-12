@@ -1,7 +1,9 @@
 import { GameStateManager } from './GameStateManager';
 import { EventProcessor, AnimationAction } from './EventProcessor';
-import { mockRgsClient } from '../api/mockRgsClient';
+import * as rgsClient from '../api';
+import { StakeEngineError, ERROR_CODES } from '../api';
 import { PlayResponse } from '../types';
+import config from '../config';
 
 /**
  * Game Controller - orchestrates game flow and RGS communication
@@ -11,10 +13,18 @@ export class GameController {
   private eventProcessor: EventProcessor;
   private animationQueue: AnimationAction[] = [];
   private onAnimationAction?: (action: AnimationAction) => Promise<void>;
+  private gameApp?: any; // Reference to GameApp for error display
   
   constructor(stateManager: GameStateManager) {
     this.stateManager = stateManager;
     this.eventProcessor = new EventProcessor();
+  }
+  
+  /**
+   * Set reference to GameApp for error display
+   */
+  setGameApp(app: any): void {
+    this.gameApp = app;
   }
   
   /**
@@ -37,11 +47,14 @@ export class GameController {
       const sessionID = urlParams.get('sessionID') || 'default-session';
       const rgsUrl = urlParams.get('rgs_url');
       
-      console.log('[GameController] Session ID:', sessionID);
-      console.log('[GameController] RGS URL:', rgsUrl || 'mock');
+      if (config.enableDebug) {
+        console.log('[GameController] Session ID:', sessionID);
+        console.log('[GameController] RGS URL:', rgsUrl || 'mock');
+        console.log('[GameController] RGS Mode:', config.rgsMode);
+      }
       
-      // Authenticate
-      const response = await mockRgsClient.authenticate({ sessionID });
+      // Authenticate with RGS (mock or real)
+      const response = await rgsClient.authenticate({ sessionID });
       
       // Update state
       this.stateManager.setSessionID(response.sessionID);
@@ -59,9 +72,18 @@ export class GameController {
       
       // Ready to play
       this.stateManager.setState('IDLE');
+      
     } catch (error) {
       console.error('[GameController] Initialization failed:', error);
       this.stateManager.setState('ERROR');
+      
+      // Handle specific errors
+      if (error instanceof StakeEngineError) {
+        this.showError(error.message);
+      } else {
+        this.showError('Failed to initialize game');
+      }
+      
       throw error;
     }
   }
@@ -88,15 +110,17 @@ export class GameController {
         throw new Error('No session ID');
       }
       
-      // Call RGS play
-      const response: PlayResponse = await mockRgsClient.play({
+      // Call RGS play (mock or real)
+      const response: PlayResponse = await rgsClient.play({
         sessionID,
         amount: betAmount,
         mode: 'BASE',
       });
       
-      console.log('[GameController] Response:', response);
-      console.log('[GameController] Events:', response.round?.events);
+      if (config.enableDebug) {
+        console.log('[GameController] Response:', response);
+        console.log('[GameController] Events:', response.round?.events);
+      }
       
       // Update balance (after bet deducted)
       this.stateManager.setBalance(response.balance);
@@ -116,6 +140,20 @@ export class GameController {
     } catch (error) {
       console.error('[GameController] Play failed:', error);
       this.stateManager.setState('ERROR');
+      
+      // Handle specific Stake Engine errors
+      if (error instanceof StakeEngineError) {
+        this.showError(error.message);
+        
+        // Special handling for balance errors
+        if (error.code === ERROR_CODES.ERR_IPB) {
+          // Insufficient balance - return to idle
+          this.stateManager.setState('IDLE');
+        }
+      } else {
+        this.showError('Failed to play round');
+      }
+      
       throw error;
     }
   }
@@ -148,18 +186,23 @@ export class GameController {
         if (winAmount > 0) {
           console.log('[GameController] Win amount:', winAmount);
           this.stateManager.setLastWin(winAmount);
-          
-          // Credit win
-          mockRgsClient.creditWin(winAmount);
-          
-          // Call end-round
-          const sessionID = this.stateManager.getSessionID();
-          if (sessionID) {
-            const endResponse = await mockRgsClient.endRound({ sessionID });
-            this.stateManager.setBalance(endResponse.balance);
-          }
         } else {
           console.log('[GameController] No win');
+        }
+        
+        // Call end-round (acknowledges round completion)
+        try {
+          const sessionID = this.stateManager.getSessionID();
+          if (sessionID) {
+            const endResponse = await rgsClient.endRound({ sessionID });
+            // Update balance if returned (some RGS may credit win here)
+            if (endResponse.balance > 0) {
+              this.stateManager.setBalance(endResponse.balance);
+            }
+          }
+        } catch (error) {
+          // endRound is not critical, just log error
+          console.error('[GameController] endRound failed:', error);
         }
       }
     }
@@ -177,6 +220,21 @@ export class GameController {
    */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  
+  /**
+   * Show error message to user
+   */
+  private showError(message: string): void {
+    console.error('[GameController] Error:', message);
+    
+    // Show error in UI if GameApp reference is available
+    if (this.gameApp && typeof this.gameApp.showError === 'function') {
+      this.gameApp.showError(message);
+    } else if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+      // Fallback to alert (temporary)
+      window.alert(message);
+    }
   }
   
   /**

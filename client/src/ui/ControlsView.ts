@@ -78,11 +78,11 @@ export class ControlsView extends PIXI.Container {
   /**
    * Create text with default style
    */
-  private createText(text: string, fontSize: number = 16, fontWeight: string = 'normal'): PIXI.Text {
+  private createText(text: string, fontSize: number = 16, fontWeight: 'normal' | 'bold' = 'normal'): PIXI.Text {
     return new PIXI.Text(text, {
       fontFamily: 'Arial, sans-serif',
       fontSize,
-      fontWeight,
+      fontWeight: fontWeight as any, // PixiJS type compatibility
       fill: 0xFFFFFF,
       stroke: 0x000000,
       strokeThickness: 2,

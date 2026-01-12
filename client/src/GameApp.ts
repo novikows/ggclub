@@ -5,7 +5,10 @@ import { AnimationAction } from './game/EventProcessor';
 import { BoardView } from './ui/BoardView';
 import { ControlsView } from './ui/ControlsView';
 import { WinModal } from './ui/WinModal';
+import { ErrorModal } from './ui/ErrorModal';
 import { getHandTier } from './utils/handEvaluator';
+import { onBalanceUpdate, onRoundStateChange } from './api';
+import config from './config';
 
 /**
  * Main Game Application
@@ -25,6 +28,7 @@ export class GameApp {
   private boardView: BoardView;
   private controlsView: ControlsView;
   private winModal: WinModal;
+  private errorModal: ErrorModal;
   
   constructor() {
     // Create PixiJS application
@@ -44,10 +48,14 @@ export class GameApp {
     this.stateManager = new GameStateManager();
     this.gameController = new GameController(this.stateManager);
     
+    // Connect GameController to GameApp for error display
+    this.gameController.setGameApp(this);
+    
     // Create UI components
     this.boardView = new BoardView();
     this.controlsView = new ControlsView();
     this.winModal = new WinModal();
+    this.errorModal = new ErrorModal();
     
     console.log('[GameApp] Created');
   }
@@ -76,6 +84,11 @@ export class GameApp {
       
       // Setup state listeners
       this.setupStateListeners();
+      
+      // Setup Stake Engine event listeners (only if using Stake Engine)
+      if (config.rgsMode === 'stake') {
+        this.setupStakeEngineListeners();
+      }
       
       // Set animation handler
       this.gameController.setAnimationHandler(this.handleAnimation.bind(this));
@@ -265,6 +278,9 @@ export class GameApp {
     this.winModal.setCloseHandler(() => this.onWinModalClose());
     this.app.stage.addChild(this.winModal);
     
+    // Initialize error modal (on top)
+    this.app.stage.addChild(this.errorModal);
+    
     // Create audio button
     this.createAudioButton();
     
@@ -302,6 +318,39 @@ export class GameApp {
       const canPlay = state === 'IDLE';
       this.controlsView.setPlayEnabled(canPlay);
       this.controlsView.setBetControlsEnabled(canPlay);
+    });
+  }
+  
+  /**
+   * Setup Stake Engine WebSocket event listeners
+   * Only called when using real Stake Engine client
+   */
+  private setupStakeEngineListeners(): void {
+    if (config.enableDebug) {
+      console.log('[GameApp] Setting up Stake Engine listeners');
+    }
+    
+    // Listen for balance updates from Stake Engine
+    onBalanceUpdate((balance: number) => {
+      if (config.enableDebug) {
+        console.log('[GameApp] Balance update from Stake Engine:', balance);
+      }
+      
+      // Update controls view
+      this.controlsView.updateBalance(balance);
+      
+      // Update state manager
+      this.stateManager.setBalance(balance);
+    });
+    
+    // Listen for round state changes
+    onRoundStateChange((state: string) => {
+      if (config.enableDebug) {
+        console.log('[GameApp] Round state change from Stake Engine:', state);
+      }
+      
+      // Could use this for additional UI feedback
+      // For now, just log it
     });
   }
   
@@ -398,6 +447,14 @@ export class GameApp {
   }
   
   /**
+   * Show error message to user
+   */
+  public showError(message: string): void {
+    console.error('[GameApp] Showing error:', message);
+    this.errorModal.show(message);
+  }
+  
+  /**
    * Resize and layout UI
    */
   private resize(): void {
@@ -418,6 +475,9 @@ export class GameApp {
     this.boardView.resize(width, height);
     this.controlsView.resize(width, height);
     this.winModal.resize(width, height);
+    
+    // Position error modal in center
+    this.errorModal.position.set(width / 2, height / 2);
   }
   
   /**

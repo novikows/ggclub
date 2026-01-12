@@ -99,6 +99,17 @@ npm run dev
 
 ## 📚 Documentation
 
+### 🎯 **[PROJECT_STATUS.md](PROJECT_STATUS.md)** ⭐ **COMPLETE PROJECT SUMMARY**
+**Complete overview:** Project, tech stack, current session, RTP tuning, next steps
+
+### 🚀 **[PRODUCTION_ROADMAP.md](PRODUCTION_ROADMAP.md)** 🆕 **DETAILED PLAN TO LAUNCH**
+**Step-by-step:** From now (Week 1 Day 5) to production launch (3 weeks)
+
+### 🎨 **[FRONTEND_INTEGRATION_PLAN.md](FRONTEND_INTEGRATION_PLAN.md)** 🆕 **WEEK 2 DETAILED PLAN**
+**Frontend:** Replace mock RGS with Stake Engine client (7 days, step-by-step)
+
+---
+
 ### 🌟 Stake Engine Integration (Start Here!):
 
 📁 **[docs/stake/](docs/stake/)** - All Stake Engine specs

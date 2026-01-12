@@ -4,7 +4,8 @@ import {
   HandCategory,
   HandResultEvent,
   RevealInitialBoardEvent,
-  JokerTransformEvent 
+  JokerTransformEvent,
+  CardSymbol 
 } from '../types';
 
 /**
@@ -21,15 +22,67 @@ interface MockScenario {
   winningPositions: number[];
 }
 
+/**
+ * Rank values for comparison (higher is better)
+ */
+const RANK_VALUES: Record<string, number> = {
+  '2': 2,
+  '3': 3,
+  '4': 4,
+  '5': 5,
+  '6': 6,
+  '7': 7,
+  '8': 8,
+  '9': 9,
+  '10': 10,
+  'J': 11,
+  'Q': 12,
+  'K': 13,
+  'A': 14,
+};
+
+/**
+ * Find the position of the highest card on the board
+ * Used for HIGH_CARD hands to determine which card to animate
+ */
+function findHighestCardPosition(board: Symbol[]): number {
+  let highestValue = 0;
+  let highestPosition = 0;
+  
+  for (let i = 0; i < board.length; i++) {
+    const symbol = board[i];
+    if (symbol === 'JOKER') continue; // Skip jokers
+    
+    // Extract rank from card symbol (e.g., "AS" -> "A", "10H" -> "10")
+    const rank = symbol.slice(0, -1); // Remove last character (suit)
+    const value = RANK_VALUES[rank] || 0;
+    
+    if (value > highestValue) {
+      highestValue = value;
+      highestPosition = i;
+    }
+  }
+  
+  return highestPosition;
+}
+
 export const MOCK_SCENARIOS: MockScenario[] = [
-  // Loss scenarios
+  // Loss scenarios - HIGH_CARD with no payout (still animate highest card)
   {
-    name: 'No win - low cards',
+    name: 'No win - low cards (9 high)',
     board: ['2C', '5D', '7H', '9S', '3C'],
     hasJoker: false,
     handCategory: 'HIGH_CARD',
     payoutMultiplier: 0,
-    winningPositions: [],
+    winningPositions: [3], // 9S is highest
+  },
+  {
+    name: 'No win - Ace high',
+    board: ['6C', 'QD', 'AD', '10H', 'JH'],
+    hasJoker: false,
+    handCategory: 'HIGH_CARD',
+    payoutMultiplier: 0,
+    winningPositions: [2], // AD is highest
   },
   
   // Normal wins
@@ -186,13 +239,27 @@ export function generateMockEvents(scenario: MockScenario): GameEvent[] {
     events.push(jokerEvent);
   }
   
+  // Determine final board (after joker transforms if any)
+  const finalBoard = [...scenario.board];
+  if (scenario.hasJoker && scenario.jokerTransforms) {
+    for (const transform of scenario.jokerTransforms) {
+      finalBoard[transform.position] = transform.targetSymbol;
+    }
+  }
+  
+  // For HIGH_CARD hands, ensure we animate the highest card
+  let winningPositions = scenario.winningPositions;
+  if (scenario.handCategory === 'HIGH_CARD' && winningPositions.length === 0) {
+    winningPositions = [findHighestCardPosition(finalBoard)];
+  }
+  
   // Event 3: Hand result
   const resultEvent: HandResultEvent = {
     index: scenario.hasJoker ? 2 : 1,
     type: 'hand_result',
     handCategory: scenario.handCategory,
     payoutMultiplier: scenario.payoutMultiplier,
-    winningPositions: scenario.winningPositions,
+    winningPositions,
     jackpot: scenario.payoutMultiplier >= 40,
   };
   events.push(resultEvent);
@@ -206,7 +273,8 @@ export function generateMockEvents(scenario: MockScenario): GameEvent[] {
 export function getRandomScenario(): MockScenario {
   // Weighted selection - more common hands appear more often
   const weights = [
-    3, // Loss
+    2, // Loss - 9 high
+    2, // Loss - Ace high
     5, // Pair of Aces
     4, // Two Pair
     3, // Three 7s
