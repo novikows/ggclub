@@ -10,7 +10,8 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "pixi.js": "^7.4.0"
+    "pixi.js": "^7.4.0",
+    "stake-engine": "^0.1.32"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
