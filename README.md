@@ -1,220 +1,178 @@
-# 🎰 Joker Poker Board
+# Joker Poker Board - Svelte 5 + SvelteKit
 
-Casino poker game with Joker wild cards, built for **Stake Engine** platform.
-
-## 📦 Project Structure
-
-### This Repository (Frontend)
-
-```
-pokerspin/
-├── client/          # Frontend (PixiJS + TypeScript) ✅ COMPLETE
-│   ├── src/
-│   │   ├── api/    # RGS client (mock → real)
-│   │   ├── game/   # Game logic & state machine
-│   │   └── ui/     # PixiJS components
-│   └── public/     # Assets (cards, backgrounds)
-├── docs/
-│   ├── stake/      # Stake Engine integration docs ⭐
-│   │   ├── START_HERE.md
-│   │   ├── MATH_SDK_SETUP_INSTRUCTIONS.md
-│   │   ├── DECISION_SUMMARY.md  🆕
-│   │   └── ...
-│   └── [original specs]
-└── README.md       # This file
-```
-
-### Separate Repository (Math SDK)
-
-**Decision:** Fork официального Stake Engine Math SDK
-
-```
-pokerspin-math/  (fork от https://github.com/StakeEngine/math-sdk)
-├── games/
-│   └── joker_poker/     # Game math (Python)
-│       ├── game.py      # Hand evaluation, Joker logic
-│       └── simulate.py  # RTP simulation
-└── uploads/
-    └── joker_poker/     # Generated outcomes
-```
-
-**Why separate?**
-- ✅ Math SDK используется 1 раз (для генерации outcomes)
-- ✅ Frontend активная разработка
-- ✅ Разные языки (Python vs TypeScript)
-- ✅ Math SDK архивируется после upload
-
-**Details:** [docs/stake/DECISION_SUMMARY.md](docs/stake/DECISION_SUMMARY.md)
+Poker game frontend built with **Svelte 5**, **SvelteKit**, and **Stake Engine** integration.
 
 ## 🚀 Quick Start
 
-### Current: MVP v1.0 with Mock (Working Now!)
+### Development
 
 ```bash
-cd client
 npm install
 npm run dev
 ```
 
-**Open:** http://localhost:3000 🎮
+Open [http://localhost:5173](http://localhost:5173)
 
-### Status
+### Build for Production
 
-✅ **MVP v1.0 Complete**
-- Full client implementation with PixiJS
-- Mock RGS with 15 game scenarios
-- State machine (INIT → IDLE → SPINNING → WIN)
-- Card animations (flop → turn → river)
-- Joker transformation effects
-- 5 win tiers with modals
-- Responsive mobile-first UI
-- Bet controls (9 levels)
-
-🔄 **Next: Stake Engine Integration (3 weeks)**
-
-**Архитектура:** Fork Math SDK + Frontend в этом репо
-- 📖 **[docs/stake/DECISION_SUMMARY.md](docs/stake/DECISION_SUMMARY.md)** - Детали решения
-
-#### Week 1: Math SDK (Python) → Отдельный репо `pokerspin-math`
-- ✅ Fork Stake Engine Math SDK
-- ✅ Implement Joker Poker game logic
-- ✅ Generate 10M outcomes
-- ✅ Upload to Stake Engine
-- 📖 **[MATH_SDK_SETUP_INSTRUCTIONS.md](docs/stake/MATH_SDK_SETUP_INSTRUCTIONS.md)**
-
-#### Week 2: Frontend Integration → Этот репо `pokerspin`
-- Install `stake-engine` npm package
-- Replace mock with real client
-- Add event listeners
-- Testing
-- 📖 **[STAKE_CLIENT_INTEGRATION.md](docs/stake/STAKE_CLIENT_INTEGRATION.md)**
-
-#### Week 3: Production Deploy → Stake CDN
-- Build for production
-- Upload to Stake CDN
-- QA testing
-- Launch! 🚀
-
----
-
-## 📚 Documentation
-
-### 🎯 **[PROJECT_STATUS.md](PROJECT_STATUS.md)** ⭐ **COMPLETE PROJECT SUMMARY**
-**Complete overview:** Project, tech stack, current session, RTP tuning, next steps
-
-### 🚀 **[PRODUCTION_ROADMAP.md](PRODUCTION_ROADMAP.md)** 🆕 **DETAILED PLAN TO LAUNCH**
-**Step-by-step:** From now (Week 1 Day 5) to production launch (3 weeks)
-
-### 🎨 **[FRONTEND_INTEGRATION_PLAN.md](FRONTEND_INTEGRATION_PLAN.md)** 🆕 **WEEK 2 DETAILED PLAN**
-**Frontend:** Replace mock RGS with Stake Engine client (7 days, step-by-step)
-
----
-
-### 🌟 Stake Engine Integration (Start Here!):
-
-📁 **[docs/stake/](docs/stake/)** - All Stake Engine specs
-
-1. **[docs/stake/START_HERE.md](docs/stake/START_HERE.md)** ⭐ **READ FIRST!**
-2. **[docs/stake/DECISION_SUMMARY.md](docs/stake/DECISION_SUMMARY.md)** 🆕 **Архитектурное решение**
-3. **[docs/stake/MATH_SDK_SETUP_INSTRUCTIONS.md](docs/stake/MATH_SDK_SETUP_INSTRUCTIONS.md)** 🆕 **Week 1 Setup**
-4. **[docs/stake/MATH_SDK_DETAILED_GUIDE.md](docs/stake/MATH_SDK_DETAILED_GUIDE.md)** - Python код
-5. **[docs/stake/STAKE_CLIENT_INTEGRATION.md](docs/stake/STAKE_CLIENT_INTEGRATION.md)** - Week 2 Frontend
-6. **[docs/stake/NEXT_STEPS_STAKE_ENGINE.md](docs/stake/NEXT_STEPS_STAKE_ENGINE.md)** - Полный чеклист
-7. **[docs/stake/README.md](docs/stake/README.md)** - Documentation index
-
-### Current MVP:
-- **[client/README.md](client/README.md)** - Client docs
-- **[client/TESTING.md](client/TESTING.md)** - Test guide
-- **[MVP_SUMMARY.md](MVP_SUMMARY.md)** - MVP overview
-
-### Original Specs:
-- **[docs/quick_start_guide.md](docs/quick_start_guide.md)** - Quick start
-- **[docs/global_specification.md](docs/global_specification.md)** - Full spec
-
-## 🎮 Features
-
-### Game Mechanics
-- **5-card poker board** (board-only, no hole cards)
-- **Joker wild cards** (max 2 per round)
-- **13 hand types** from High Card to Royal Flush
-- **9 bet levels** from $0.10 to $1,000
-
-### Visual Features
-- Sequential card reveal (flop → turn → river)
-- Joker transformation animations
-- Winning card highlights
-- Tier-based win modals (NORMAL/MEDIUM/HIGH/BEST/JACKPOT)
-- Mobile-first responsive design
-
-### Paytable (Validated RTP: 98.34%)
-
-| Hand | Multiplier | Tier | Frequency |
-|------|-----------|------|-----------|
-| High Card (2-10) | x0.1 | NORMAL | 24% |
-| High Card (J-A) | x0.35 | NORMAL | 17% |
-| Pair (2-10) | x0.55 | NORMAL | 23% |
-| Pair (J-A) | x0.9 | NORMAL | 22% |
-| Two Pair (2-10) | x0.8 | NORMAL | 2% |
-| Two Pair (J-A) | x1.5 | MEDIUM | 2% |
-| Three of a Kind (2-10) | x1.8 | MEDIUM | 3.7% |
-| Three of a Kind (J-A) | x3.0 | HIGH | 3.7% |
-| Straight | x5 | HIGH | 1.1% |
-| Flush | x10 | JACKPOT | 0.36% |
-| Full House | x20 | JACKPOT | 0.31% |
-| Four of a Kind | x40 | JACKPOT | 0.31% |
-| Straight Flush | x100 | JACKPOT | 0.017% |
-| Royal Flush | x1000 | JACKPOT 🎰 | 0.003% |
-
-**RTP:** 98.34% (tested with 1M simulations) ✅
-
-## 📚 Documentation
-
-- **[Quick Start Guide](docs/quick_start_guide.md)** - Get started quickly
-- **[Global Specification](docs/global_specification.md)** - Complete technical spec
-- **[State Machine Brief](docs/state_machine_brief.md)** - State flow details
-- **[Client README](client/README.md)** - Frontend documentation
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **TypeScript** - Type-safe JavaScript
-- **PixiJS v7** - WebGL rendering engine
-- **Vite** - Fast build tool
-
-### Backend (Future)
-- **Stake Engine Math SDK** - Game math & RNG
-- **Python** - Math implementation
-
-## 🎯 Game Flow
-
-```
-INIT (loading)
-  ↓
-IDLE (ready to play)
-  ↓ [player clicks PLAY]
-SPINNING (cards animating)
-  ↓
-JOKER_TRANSFORM (if joker present)
-  ↓
-DISPLAYING_WIN (show result)
-  ↓ [click or timeout]
-IDLE (ready for next round)
+```bash
+npm run build
 ```
 
-## 🎨 Screenshots
+Output will be in `build/` directory - ready to upload to Stake Engine CDN.
 
-See the Figma mockup in the screenshot provided.
+### Type Checking
 
-## 📝 License
+```bash
+npm run check
+```
 
-UNLICENSED - Private project
+## 📁 Project Structure
 
-## 👥 Team
+```
+src/
+├── lib/
+│   ├── api/
+│   │   ├── stakeRgsClient.ts       # Stake Engine RGS client
+│   │   └── EventProcessor.ts       # Process RGS events
+│   ├── game/
+│   │   ├── gameState.svelte.ts     # Global game state (Svelte 5 runes)
+│   │   └── GameController.svelte.ts # Game logic controller
+│   ├── components/
+│   │   ├── BoardView.svelte         # 5-card board display
+│   │   ├── CardSprite.svelte        # Individual card component
+│   │   ├── ControlsView.svelte      # Play button + bet controls
+│   │   └── WinModal.svelte          # Win celebration modal
+│   ├── types/
+│   │   └── index.ts                 # TypeScript types
+│   └── config.ts                    # Configuration
+└── routes/
+    ├── +page.svelte                 # Main game page
+    └── +layout.svelte               # Root layout
+```
 
-Developed for Stake Engine platform integration.
+## 🎮 Game Features
+
+### Implemented
+- ✅ 5-card poker board with flop → turn → river animations
+- ✅ Joker transformation animations
+- ✅ Win modal with hand categories
+- ✅ Balance, bet, and win display
+- ✅ Stake Engine RGS integration
+- ✅ Event-driven architecture
+- ✅ TypeScript types matching math output
+- ✅ Responsive UI
+
+### Architecture
+
+**State Management**: Svelte 5 runes (`$state`, `$derived`, `$effect`)
+```typescript
+// Global reactive state
+import { gameState } from '$lib/game/gameState.svelte';
+
+// Usage in components
+$: balance = gameState.balance;
+```
+
+**Game Flow**:
+1. `GameController` - orchestrates game logic
+2. `EventProcessor` - converts RGS events to animations
+3. Components - reactive UI updates via `gameState`
+
+**RGS Integration**:
+```typescript
+// stakeRgsClient.ts wraps official stake-engine package
+import * as rgsClient from '$lib/api/stakeRgsClient';
+
+// Authenticate
+const response = await rgsClient.authenticate({ sessionID });
+
+// Play round
+const playResponse = await rgsClient.play({ sessionID, amount, mode: 'BASE' });
+```
+
+## 🔧 Configuration
+
+### RGS Mode
+Edit `src/lib/config.ts`:
+
+```typescript
+export default {
+  rgsMode: 'stake' as 'mock' | 'local' | 'stake',
+  enableDebug: true,
+  logRgsCalls: true,
+};
+```
+
+- **`stake`**: Production - uses real Stake Engine RGS
+- **`mock`**: Development - uses mock data (not yet implemented)
+- **`local`**: Development - uses local Python server (not yet implemented)
+
+## 📦 Dependencies
+
+### Production
+- `svelte@^5.0.0` - Reactive framework with runes
+- `@sveltejs/kit@^2.49.1` - SvelteKit framework
+- `stake-engine@^0.1.32` - Official Stake Engine client
+- `pixi.js@^7.4.0` - 2D WebGL renderer (for future enhancements)
+- `pixi-svelte@^2.0.0` - PixiJS + Svelte integration (for future enhancements)
+
+### Development
+- `typescript@^5.9.3`
+- `vite@^6.0.0`
+- `@sveltejs/adapter-static@^3.0.6` - Static build adapter
+- `svelte-check@^4.3.4` - Type checking
+
+## 🎯 Next Steps
+
+### To Do
+1. **Mock RGS Client**: Implement mock mode for local development without Python server
+2. **PixiJS Integration**: Replace CSS animations with PixiJS for better performance
+3. **Sound Effects**: Add audio feedback
+4. **Storybook**: Component testing setup
+5. **Mobile Optimization**: Test and optimize for mobile devices
+
+### Deployment to Stake Engine
+
+1. **Build**:
+   ```bash
+   npm run build
+   ```
+
+2. **Upload to Stake Engine**:
+   - Upload `build/` folder to Stake Engine CDN
+   - Configure game in admin panel
+   - Test with `?sessionID=...` parameter
+
+## 🐛 Troubleshooting
+
+### TypeScript Errors
+```bash
+npm run check
+```
+
+### Module Resolution Issues
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Stake Engine Connection Fails
+- Check `sessionID` in URL params
+- Verify `stake-engine` package is installed
+- Check console for RGS errors
+
+## 📚 Resources
+
+- [Svelte 5 Docs](https://svelte.dev/docs/svelte/overview)
+- [SvelteKit Docs](https://kit.svelte.dev/docs)
+- [Stake Engine Docs](https://stakeengine.github.io/)
+- [FRONTEND_SPECIFICATION.md](../FRONTEND_SPECIFICATION.md) - Full spec from Stake Engine docs
+
+## 🤝 Contributing
+
+This is a production game - no external contributions at this time.
 
 ---
 
-**Current Version:** MVP v1.0 (Mock RGS)  
-**Status:** ✅ Ready for testing  
-**Next:** Real RGS integration
+**Built with ❤️ using Svelte 5 + SvelteKit + Stake Engine**

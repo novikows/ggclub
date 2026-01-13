@@ -39,29 +39,49 @@
 - Phase 2: Frontend integration
 - Code examples
 
-#### 5. **[STAKE_CLIENT_INTEGRATION.md](STAKE_CLIENT_INTEGRATION.md)**
-**TypeScript Client** - frontend integration
+#### 5. **[FRONTEND_READINESS_SPECIFICATION.md](FRONTEND_READINESS_SPECIFICATION.md)** 🆕 **ПОЛНАЯ СПЕЦИФИКАЦИЯ FRONTEND**
+**Главный документ для frontend integration**
+- Текущее состояние проекта
+- Требования Stake Engine
+- Обязательные изменения (с кодом)
+- Event-driven architecture
+- Монетарная система
+- Сборка и деплой
+- Требования Admin Panel
+- Чеклист готовности
+- План реализации (7 дней)
+
+#### 6. **[FRONTEND_INTEGRATION_QUICK_REFERENCE.md](FRONTEND_INTEGRATION_QUICK_REFERENCE.md)** 🆕 **БЫСТРАЯ ШПАРГАЛКА**
+**Quick reference** - самое важное на одной странице
+- Критичные задачи (5 пунктов)
+- Production build (4 команды)
+- Testing checklist
+- Common issues & solutions
+- Time estimates
+
+#### 7. **[STAKE_CLIENT_INTEGRATION.md](STAKE_CLIENT_INTEGRATION.md)**
+**TypeScript Client** - detailed integration guide
 - Install stake-engine package
 - Create stakeRgsClient.ts wrapper
 - Update GameController.ts
 - Event listeners setup
 - Testing guide
 
-#### 6. **[NEXT_STEPS_STAKE_ENGINE.md](NEXT_STEPS_STAKE_ENGINE.md)**
+#### 8. **[NEXT_STEPS_STAKE_ENGINE.md](NEXT_STEPS_STAKE_ENGINE.md)**
 **Implementation Plan** - step-by-step
 - Week 1: Math SDK checklist
 - Week 2: Frontend checklist
 - Week 3: Deploy checklist
 - Day-by-day tasks
 
-#### 7. **[STAKE_ENGINE_SUMMARY.md](STAKE_ENGINE_SUMMARY.md)**
+#### 9. **[STAKE_ENGINE_SUMMARY.md](STAKE_ENGINE_SUMMARY.md)**
 **Complete Summary** - all in one
 - Architecture overview
 - Full checklist (3 weeks)
 - Expected results
 - Success criteria
 
-#### 8. **[FINAL_SUMMARY.md](FINAL_SUMMARY.md)**
+#### 10. **[FINAL_SUMMARY.md](FINAL_SUMMARY.md)**
 **Final Overview** - meta document
 - Links to all docs
 - External resources
@@ -79,7 +99,9 @@
 **→ Код:** [MATH_SDK_DETAILED_GUIDE.md](MATH_SDK_DETAILED_GUIDE.md) (теория)
 
 ### Вопрос: Как интегрировать фронтенд?
-**→ Читай:** [STAKE_CLIENT_INTEGRATION.md](STAKE_CLIENT_INTEGRATION.md)
+**→ Читай:** [FRONTEND_READINESS_SPECIFICATION.md](FRONTEND_READINESS_SPECIFICATION.md) (полная спецификация)
+**→ Или:** [FRONTEND_INTEGRATION_QUICK_REFERENCE.md](FRONTEND_INTEGRATION_QUICK_REFERENCE.md) (quick start)
+**→ Или:** [STAKE_CLIENT_INTEGRATION.md](STAKE_CLIENT_INTEGRATION.md) (detailed guide)
 
 ### Вопрос: Какой план реализации?
 **→ Читай:** [NEXT_STEPS_STAKE_ENGINE.md](NEXT_STEPS_STAKE_ENGINE.md)

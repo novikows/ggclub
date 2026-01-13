@@ -1,36 +1,32 @@
 {
-  "name": "pokerspin",
-  "version": "1.0.0",
-  "description": "PokerReels - Provider-Grade HTML5 Casino Game with RGS Server",
-  "private": true,
-  "workspaces": [
-    "client",
-    "server"
-  ],
-  "scripts": {
-    "dev:client": "npm run dev --workspace=client",
-    "dev:server": "npm run dev --workspace=server",
-    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-    "build:client": "npm run build --workspace=client",
-    "build:server": "npm run build --workspace=server",
-    "build": "npm run build:client",
-    "start": "npx serve client/dist -s -l ${PORT:-3000}",
-    "test": "npm run test --workspaces",
-    "lint": "npm run lint --workspaces",
-    "typecheck": "npm run typecheck --workspaces"
-  },
-  "keywords": [
-    "casino",
-    "poker",
-    "rgs",
-    "html5-game",
-    "seamless-wallet",
-    "game-provider"
-  ],
-  "author": "",
-  "license": "UNLICENSED",
-  "devDependencies": {
-    "concurrently": "^8.2.2"
-  }
+	"name": "app-pokerspin",
+	"private": true,
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"typecheck": "tsc --noEmit",
+		"lint": "eslint src --ext ts,svelte --report-unused-disable-directives --max-warnings 0"
+	},
+	"dependencies": {
+		"pixi.js": "^7.4.0",
+		"pixi-svelte": "^2.0.0",
+		"stake-engine": "^0.1.32"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-static": "^3.0.6",
+		"@sveltejs/adapter-auto": "^7.0.0",
+		"@sveltejs/kit": "^2.49.1",
+		"@sveltejs/vite-plugin-svelte": "^5.0.0",
+		"@types/node": "^20.11.0",
+		"svelte": "^5.0.0",
+		"svelte-check": "^4.3.4",
+		"typescript": "^5.9.3",
+		"vite": "^6.0.0"
+	}
 }
-
