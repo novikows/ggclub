@@ -18,6 +18,7 @@
   let audioInitialized = $state(false);
   let displayBalance = $state(0);
   let targetBalance = $state(0);
+  let videoElement: HTMLVideoElement;
 
   onMount(async () => {
     try {
@@ -27,6 +28,21 @@
       displayBalance = gameState.balance;
       targetBalance = gameState.balance;
       initialized = true;
+      
+      // Force play video if it didn't autoplay
+      console.log('[Game] Checking video element:', videoElement);
+      if (videoElement) {
+        console.log('[Game] Attempting to play video...');
+        videoElement.play()
+          .then(() => {
+            console.log('[Game] Video started playing successfully');
+          })
+          .catch((e) => {
+            console.log('[Game] Video autoplay prevented, will retry on user interaction:', e);
+          });
+      } else {
+        console.log('[Game] Video element not found!');
+      }
     } catch (err) {
       console.error('[Game] Initialization failed:', err);
       error = err instanceof Error ? err.message : 'Failed to initialize game';
@@ -34,7 +50,7 @@
   });
 
   $effect(() => {
-    if (!showWinModal && gameState.balance !== displayBalance) {
+    if (gameState.balance !== targetBalance) {
       targetBalance = gameState.balance;
     }
   });
@@ -62,6 +78,7 @@
             winAmount: winAmount,
             multiplier: action.payload.payoutMultiplier
           };
+          playWinSound(action.payload.payoutMultiplier);
           showWinModal = true;
         }
         break;
@@ -76,14 +93,32 @@
       audioInitialized = true;
     }
     
+    // Try to play video on first user interaction
+    if (videoElement && videoElement.paused) {
+      videoElement.play().catch(() => {});
+    }
+    
     showWinModal = false;
+    displayBalance = gameState.balance - gameState.currentBet;
     boardViewRef?.reset();
     await controller.play();
   }
 
-  function handleVideoError() {
+  function handleVideoError(event: Event) {
     videoError = true;
-    console.log('[Game] Video background failed to load, using gradient fallback');
+    console.error('[Game] Video background failed to load:', event);
+    console.log('[Game] Using gradient fallback');
+  }
+
+  function handleVideoLoaded() {
+    console.log('[Game] Video background loaded successfully');
+    console.log('[Game] Video element:', videoElement);
+    console.log('[Game] Video readyState:', videoElement?.readyState);
+    console.log('[Game] Video paused:', videoElement?.paused);
+  }
+  
+  function handleVideoCanPlay() {
+    console.log('[Game] Video can play');
   }
 
   function toggleSound() {
@@ -139,6 +174,16 @@
       }
     }, stepDuration);
   }
+
+  function playWinSound(multiplier: number) {
+    if (multiplier >= 5) {
+      audioManager.playEffect('win-jackpot');
+    } else if (multiplier >= 1) {
+      audioManager.playEffect('win-big');
+    } else {
+      audioManager.playEffect('win-small');
+    }
+  }
 </script>
 
 <svelte:head>
@@ -146,18 +191,20 @@
 </svelte:head>
 
 <div class="game-container">
-  {#if !videoError}
-    <video 
-      class="background-video" 
-      autoplay 
-      loop 
-      muted 
-      playsinline
-      onerror={handleVideoError}
-    >
-      <source src="/assets/backgrounds/casino-bg.webm" type="video/webm" />
-    </video>
-  {/if}
+  <video 
+    class="background-video" 
+    autoplay 
+    loop 
+    muted 
+    playsinline
+    preload="auto"
+    onloadeddata={handleVideoLoaded}
+    oncanplay={handleVideoCanPlay}
+    onerror={handleVideoError}
+    bind:this={videoElement}
+  >
+    <source src="/assets/backgrounds/background_video.mp4" type="video/mp4" />
+  </video>
   
   {#if error}
     <div class="error-screen">
@@ -196,22 +243,22 @@
   .game-container {
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     position: relative;
+    background: #0f2027; /* Fallback color */
   }
 
   .background-video {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    z-index: -1;
+    z-index: 0;
     opacity: 0.6;
     pointer-events: none;
   }

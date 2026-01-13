@@ -3,18 +3,114 @@
   import { audioManager } from '$lib/game/audioManager.svelte';
   import type { Symbol } from '$lib/types';
 
-  let { symbol = $bindable(null as Symbol | null), highlighted = false } = $props();
+  let { 
+    symbol = $bindable(null as Symbol | null), 
+    highlighted = false,
+    position = 0
+  } = $props();
   
-  let visible = $state(false);
+  // Все 5 карт видны изначально (перевернутые)
+  let visible = $state(true);
   let faceUp = $state(false);
   let transforming = $state(false);
-  let scale = $state(0.5);
+  let scale = $state(1);
   let rotateY = $state(0);
+  let translateX = $state(0);
+  let translateY = $state(0);
+  let zIndex = $state(0);
+  let noTransition = $state(false);
+  
+  $effect(() => {
+    zIndex = position;
+  });
 
-  async function reveal() {
+  async function show() {
     visible = true;
-    await animate({ scale: 1 }, 300);
-    await flipToFaceUp();
+    faceUp = false;
+    rotateY = 0;
+  }
+
+  function hide() {
+    visible = false;
+  }
+
+  function showAtPosition() {
+    visible = true;
+    translateX = 0;
+    translateY = 0;
+    zIndex = position;
+  }
+
+  async function moveToStack(stackPosition: number) {
+    // Определяем размеры в зависимости от ширины экрана
+    const width = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    let cardWidth = 180;
+    let gap = 20;
+    
+    if (width <= 480) {
+      cardWidth = 75;
+      gap = 5;
+    } else if (width <= 768) {
+      cardWidth = 120;
+      gap = 10;
+    } else if (width <= 1200) {
+      cardWidth = 150;
+      gap = 15;
+    }
+    
+    const pos = position; // Захватываем текущее значение
+    // Все карты съезжаются к позиции 0 (первая карта слева)
+    const targetX = -(pos * (cardWidth + gap));
+    // Z-index: первые карты сверху, терн и ривер снизу (так они будут под флопом)
+    zIndex = 10 - pos;
+    // Очень маленький сдвиг по Y для эффекта стопки
+    await animate({ translateX: targetX, translateY: pos * 1 }, 400);
+  }
+
+  async function moveToPosition(targetPosition: number) {
+    zIndex = targetPosition;
+    await animate({ translateX: 0, translateY: 0 }, 500);
+  }
+
+  async function slideFromCard(fromPosition: number, toPosition: number) {
+    // Определяем размеры в зависимости от ширины экрана
+    const width = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    let cardWidth = 180;
+    let gap = 20;
+    
+    if (width <= 480) {
+      cardWidth = 75;
+      gap = 5;
+    } else if (width <= 768) {
+      cardWidth = 120;
+      gap = 10;
+    } else if (width <= 1200) {
+      cardWidth = 150;
+      gap = 15;
+    }
+    
+    // Вычисляем начальную позицию - точно под картой fromPosition
+    const startOffset = (fromPosition - toPosition) * (cardWidth + gap);
+    
+    // Отключаем transition
+    noTransition = true;
+    
+    // Мгновенно перемещаем карту под нужную карту и делаем видимой
+    translateX = startOffset;
+    translateY = 0;
+    zIndex = fromPosition + 0.5; // Чуть выше той карты, из которой выезжаем
+    visible = true; // Показываем карту только сейчас
+    
+    // Ждем применения стилей и включаем transition обратно
+    await new Promise(resolve => requestAnimationFrame(() => {
+      requestAnimationFrame(resolve);
+    }));
+    
+    noTransition = false;
+    
+    // Плавно выезжаем на свою позицию
+    zIndex = toPosition;
+    await animate({ translateX: 0 }, 500);
   }
 
   async function flipToFaceUp() {
@@ -40,21 +136,29 @@
   }
 
   function reset() {
-    visible = false;
+    visible = true; // Все карты видимы после reset
     faceUp = false;
     highlighted = false;
     transforming = false;
-    scale = 0.5;
+    scale = 1;
     rotateY = 0;
+    translateX = 0;
+    translateY = 0;
+    zIndex = position;
+    noTransition = false;
   }
 
   function animate(props: Record<string, number>, duration: number): Promise<void> {
     return new Promise(resolve => {
       if (props.scale !== undefined) scale = props.scale;
       if (props.rotateY !== undefined) rotateY = props.rotateY;
+      if (props.translateX !== undefined) translateX = props.translateX;
+      if (props.translateY !== undefined) translateY = props.translateY;
       setTimeout(resolve, duration);
     });
   }
+
+  export { show, hide, showAtPosition, moveToStack, moveToPosition, slideFromCard, flipToFaceUp, transform, highlight, reset };
 
   const getRankAndSuit = (sym: Symbol | null): { rank: string, suit: string, isJoker: boolean } => {
     if (!sym || sym === 'JOKER') {
@@ -78,14 +182,17 @@
   const getSuitColor = (suit: string): string => {
     return (suit === 'H' || suit === 'D') ? '#ff0000' : '#000000';
   };
-
-  export { reveal, transform, highlight, reset };
 </script>
 
 {#if visible}
   <div 
     class="card-container"
-    style="transform: scale({scale}); opacity: {visible ? 1 : 0}"
+    class:no-transition={noTransition}
+    style="
+      transform: scale({scale}) translate({translateX}px, {translateY}px); 
+      opacity: {visible ? 1 : 0};
+      z-index: {zIndex};
+    "
   >
     <div 
       class="card" 
@@ -123,7 +230,12 @@
 <style>
   .card-container {
     perspective: 1000px;
-    transition: transform 0.3s, opacity 0.3s;
+    transition: transform 0.5s ease-in-out, opacity 0.3s, z-index 0s;
+    position: relative;
+  }
+
+  .card-container.no-transition {
+    transition: none !important;
   }
 
   .card {
@@ -156,9 +268,9 @@
 
   @media (max-width: 480px) {
     .card {
-      width: 90px;
-      height: 130px;
-      border-radius: 10px;
+      width: 75px;
+      height: 110px;
+      border-radius: 8px;
     }
   }
 
@@ -213,11 +325,11 @@
 
   @media (max-width: 480px) {
     .card-face {
-      padding: 8px;
-      font-size: 14px;
+      padding: 6px;
+      font-size: 11px;
     }
     .rank-center {
-      font-size: 32px;
+      font-size: 26px;
     }
   }
 
@@ -342,14 +454,14 @@
 
   @media (max-width: 480px) {
     .joker-icon {
-      font-size: 40px;
+      font-size: 32px;
     }
     .joker-text {
-      font-size: 10px;
-      letter-spacing: 1px;
+      font-size: 8px;
+      letter-spacing: 0.5px;
     }
     .joker-stars {
-      font-size: 12px;
+      font-size: 10px;
     }
   }
 
