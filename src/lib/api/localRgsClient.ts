@@ -46,6 +46,7 @@ export async function play(
 ): Promise<PlayResponse> {
   console.log('[LocalRGS] play() called');
   console.log('[LocalRGS] Bet:', request.amount);
+  console.log('[LocalRGS] Mode:', request.mode);
   
   const response = await fetch(`${BASE_URL}/api/play`, {
     method: 'POST',

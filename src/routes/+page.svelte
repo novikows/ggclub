@@ -7,10 +7,12 @@
   import BoardView from '$lib/components/BoardView.svelte';
   import ControlsView from '$lib/components/ControlsView.svelte';
   import WinModal from '$lib/components/WinModal.svelte';
+  import BonusModal from '$lib/components/BonusModal.svelte';
 
   let boardViewRef: BoardView | undefined = $state();
   let controller: GameController;
   let showWinModal = $state(false);
+  let showBonusModal = $state(false);
   let winData = $state({ handCategory: 'HIGH_CARD' as any, winAmount: 0, multiplier: 0 });
   let initialized = $state(false);
   let error = $state<string | null>(null);
@@ -184,6 +186,19 @@
       audioManager.playEffect('win-small');
     }
   }
+
+  function openBonusModal() {
+    showBonusModal = true;
+  }
+
+  function closeBonusModal() {
+    showBonusModal = false;
+  }
+
+  function handleSelectBonusMode(modeId: string) {
+    gameState.setSelectedMode(modeId);
+    showBonusModal = false;
+  }
 </script>
 
 <svelte:head>
@@ -225,6 +240,7 @@
         onBetIncrease={handleBetIncrease}
         onBetDecrease={handleBetDecrease}
         onToggleSound={toggleSound}
+        onOpenBonusModal={openBonusModal}
         soundEnabled={audioManager.isSoundEnabled()}
         displayBalance={displayBalance}
       />
@@ -234,6 +250,11 @@
         winAmount={winData.winAmount}
         multiplier={winData.multiplier}
         onClose={closeWinModal}
+      />
+      <BonusModal
+        visible={showBonusModal}
+        onClose={closeBonusModal}
+        onSelectMode={handleSelectBonusMode}
       />
     </div>
   {/if}

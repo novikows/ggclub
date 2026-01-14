@@ -10,6 +10,7 @@ class GameStateStore {
   board = $state<(Symbol | null)[]>([null, null, null, null, null]);
   revealed = $state<boolean[]>([false, false, false, false, false]);
   currentEvents = $state<GameEvent[]>([]);
+  selectedMode = $state<string>('base');
 
   setState(newState: GameState) {
     this.state = newState;
@@ -47,13 +48,18 @@ class GameStateStore {
     this.currentEvents = events;
   }
 
+  setSelectedMode(mode: string) {
+    this.selectedMode = mode;
+  }
+
   resetBoard() {
     this.board = [null, null, null, null, null];
     this.revealed = [false, false, false, false, false];
   }
 
   canPlay(): boolean {
-    return this.state === 'IDLE' && this.balance >= this.currentBet;
+    const effectiveBet = this.getEffectiveBet();
+    return this.state === 'IDLE' && this.balance >= effectiveBet;
   }
 
   getState(): GameState {
@@ -66,6 +72,16 @@ class GameStateStore {
 
   getCurrentBet(): number {
     return this.currentBet;
+  }
+
+  getSelectedMode(): string {
+    return this.selectedMode;
+  }
+
+  getEffectiveBet(): number {
+    const mode = this.config?.bonusModes?.find(m => m.id === this.selectedMode);
+    const multiplier = mode?.cost || 1;
+    return this.currentBet * multiplier;
   }
 }
 

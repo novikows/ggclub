@@ -51,9 +51,48 @@ export async function authenticate(
       jurisdiction: {
         disabledTurbo: false,
       },
+      bonusModes: [
+        {
+          id: 'bonus_1joker',
+          name: 'Guaranteed 1 Joker',
+          cost: 3.0,
+          description: 'Гарантированный 1 джокер в раздаче',
+          icon: '🃏',
+        },
+        {
+          id: 'bonus_2jokers',
+          name: 'Guaranteed 2 Jokers',
+          cost: 15.0,
+          description: 'Гарантированные 2 джокера в раздаче',
+          icon: '🃏🃏',
+        },
+      ],
     },
     sessionID: mockSessionID,
   };
+}
+
+/**
+ * Count jokers in a scenario
+ */
+function countJokers(scenario: any): number {
+  return scenario.board.filter((symbol: string) => symbol === 'JOKER').length;
+}
+
+/**
+ * Get filtered scenarios based on mode
+ */
+function getScenariosForMode(mode: string): any[] {
+  if (mode === 'bonus_1joker') {
+    // Only scenarios with exactly 1 joker
+    return MOCK_SCENARIOS.filter(s => countJokers(s) === 1);
+  } else if (mode === 'bonus_2jokers') {
+    // Only scenarios with exactly 2 jokers
+    return MOCK_SCENARIOS.filter(s => countJokers(s) === 2);
+  } else {
+    // Base mode: all scenarios
+    return MOCK_SCENARIOS;
+  }
 }
 
 /**
@@ -64,17 +103,35 @@ export async function play(
 ): Promise<PlayResponse> {
   console.log('[MockRGS] play() called');
   console.log('[MockRGS] Bet:', request.amount);
+  console.log('[MockRGS] Mode:', request.mode);
   
   await delay(500);
   
   // Deduct bet from balance
   mockBalance -= request.amount;
   
-  // Get scenario (cycle through mock scenarios)
-  const scenario = MOCK_SCENARIOS[currentScenarioIndex % MOCK_SCENARIOS.length];
+  // Get scenarios for the selected mode
+  const availableScenarios = getScenariosForMode(request.mode);
+  
+  if (availableScenarios.length === 0) {
+    console.warn(`[MockRGS] No scenarios available for mode: ${request.mode}`);
+    // Fallback to base scenarios
+    const scenario = MOCK_SCENARIOS[currentScenarioIndex % MOCK_SCENARIOS.length];
+    currentScenarioIndex++;
+    
+    return {
+      balance: mockBalance,
+      round: scenario.round,
+    };
+  }
+  
+  // Get scenario (cycle through filtered scenarios)
+  const scenarioIndex = currentScenarioIndex % availableScenarios.length;
+  const scenario = availableScenarios[scenarioIndex];
   currentScenarioIndex++;
   
   console.log('[MockRGS] Scenario:', scenario.name);
+  console.log('[MockRGS] Jokers:', countJokers(scenario));
   console.log('[MockRGS] Events:', scenario.round.events);
   
   return {

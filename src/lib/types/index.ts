@@ -97,6 +97,15 @@ export interface AuthenticateRequest {
   sessionID: string;
 }
 
+/** Bonus mode configuration */
+export interface BonusMode {
+  id: string;
+  name: string;
+  cost: number;
+  description: string;
+  icon: string;
+}
+
 /** POST /wallet/authenticate response */
 export interface AuthenticateResponse {
   balance: number; // Integer with 6 decimal places (e.g., 1000000 = $1.00)
@@ -110,6 +119,7 @@ export interface AuthenticateResponse {
       disabledTurbo?: boolean;
       [key: string]: any;
     };
+    bonusModes?: BonusMode[];
     [key: string]: any;
   };
   sessionID: string;
@@ -119,7 +129,7 @@ export interface AuthenticateResponse {
 export interface PlayRequest {
   sessionID: string;
   amount: number; // Bet in engine units (e.g., 1000000 = $1.00)
-  mode: 'BASE'; // Game mode (MVP only has BASE)
+  mode: string; // Game mode: 'base', 'bonus_1joker', 'bonus_2jokers'
 }
 
 /** POST /wallet/play response */

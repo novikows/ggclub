@@ -87,10 +87,12 @@ export class GameController {
         throw new Error('No session ID');
       }
 
+      const selectedMode = gameState.getSelectedMode();
+      
       const response: PlayResponse = await rgsClient.play({
         sessionID,
         amount: betAmount,
-        mode: 'BASE',
+        mode: selectedMode,
       });
 
       if (config.enableDebug) {
