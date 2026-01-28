@@ -197,18 +197,6 @@ const scenarios: MockScenarioBase[] = [
     winningPositions: [0, 3],
   },
   {
-    name: 'Two Jokers → Four of a Kind',
-    board: ['JOKER', '10S', 'JOKER', '10D', '5C'] as Symbol[],
-    hasJoker: true,
-    jokerTransforms: [
-      { position: 0, targetSymbol: '10H' as Symbol },
-      { position: 2, targetSymbol: '10C' as Symbol }
-    ],
-    handCategory: 'FOUR_OF_A_KIND' as HandCategory,
-    payoutMultiplier: 40,
-    winningPositions: [0, 1, 2, 3],
-  },
-  {
     name: 'Joker → Royal Flush',
     board: ['10H', 'JH', 'QH', 'JOKER', 'AH'] as Symbol[],
     hasJoker: true,
@@ -273,92 +261,6 @@ const scenarios: MockScenarioBase[] = [
     payoutMultiplier: 100,
     winningPositions: [0, 1, 2, 3, 4],
   },
-  
-  // Additional 2 Jokers scenarios
-  {
-    name: 'Two Jokers + Pair → Four of a Kind (Aces)',
-    board: ['JOKER', 'AS', 'JOKER', 'AD', '5C'] as Symbol[],
-    hasJoker: true,
-    jokerTransforms: [
-      { position: 0, targetSymbol: 'AH' as Symbol },
-      { position: 2, targetSymbol: 'AC' as Symbol }
-    ],
-    handCategory: 'FOUR_OF_A_KIND' as HandCategory,
-    payoutMultiplier: 40,
-    winningPositions: [0, 1, 2, 3],
-  },
-  {
-    name: 'Two Jokers + Triple → Five of a Kind (Not standard, fallback to Four)',
-    board: ['KS', 'JOKER', 'KC', 'JOKER', 'KD'] as Symbol[],
-    hasJoker: true,
-    jokerTransforms: [
-      { position: 1, targetSymbol: 'KH' as Symbol },
-      { position: 3, targetSymbol: 'KH' as Symbol } // Duplicate, game logic handles
-    ],
-    handCategory: 'FOUR_OF_A_KIND' as HandCategory,
-    payoutMultiplier: 40,
-    winningPositions: [0, 1, 2, 3],
-  },
-  {
-    name: 'Two Jokers → Straight',
-    board: ['JOKER', '7S', 'JOKER', '9C', '10H'] as Symbol[],
-    hasJoker: true,
-    jokerTransforms: [
-      { position: 0, targetSymbol: '6D' as Symbol },
-      { position: 2, targetSymbol: '8H' as Symbol }
-    ],
-    handCategory: 'STRAIGHT' as HandCategory,
-    payoutMultiplier: 5,
-    winningPositions: [0, 1, 2, 3, 4],
-  },
-  {
-    name: 'Two Jokers → Flush',
-    board: ['JOKER', '5H', 'JOKER', 'JH', 'KH'] as Symbol[],
-    hasJoker: true,
-    jokerTransforms: [
-      { position: 0, targetSymbol: '2H' as Symbol },
-      { position: 2, targetSymbol: '7H' as Symbol }
-    ],
-    handCategory: 'FLUSH' as HandCategory,
-    payoutMultiplier: 10,
-    winningPositions: [0, 1, 2, 3, 4],
-  },
-  {
-    name: 'Two Jokers → Straight Flush',
-    board: ['JOKER', '6D', '7D', 'JOKER', '9D'] as Symbol[],
-    hasJoker: true,
-    jokerTransforms: [
-      { position: 0, targetSymbol: '5D' as Symbol },
-      { position: 3, targetSymbol: '8D' as Symbol }
-    ],
-    handCategory: 'STRAIGHT_FLUSH' as HandCategory,
-    payoutMultiplier: 100,
-    winningPositions: [0, 1, 2, 3, 4],
-  },
-  {
-    name: 'Two Jokers + High Cards → Pair',
-    board: ['JOKER', 'AS', '10D', 'JOKER', '2S'] as Symbol[],
-    hasJoker: true,
-    jokerTransforms: [
-      { position: 0, targetSymbol: 'AH' as Symbol },
-      { position: 3, targetSymbol: '10H' as Symbol } // Best pair is Aces
-    ],
-    handCategory: 'PAIR' as HandCategory,
-    payoutMultiplier: 0.9,
-    winningPositions: [0, 1],
-  },
-  {
-    name: 'Two Jokers + High Card → Three of a Kind',
-    board: ['JOKER', 'JOKER', 'KS', '7H', '3S'] as Symbol[],
-    hasJoker: true,
-    jokerTransforms: [
-      { position: 0, targetSymbol: 'KD' as Symbol },
-      { position: 1, targetSymbol: 'KH' as Symbol }
-    ],
-    handCategory: 'THREE_OF_A_KIND' as HandCategory,
-    payoutMultiplier: 3,
-    winningPositions: [0, 1, 2],
-  },
 ];
 
 export const MOCK_SCENARIOS: MockScenario[] = scenarios.map((scenario): MockScenario => ({
@@ -381,7 +283,6 @@ export function getRandomScenario(): MockScenario {
     20.0,  // High card
     5.0,   // Joker + Pair → Three of a Kind
     10.0,  // Joker + High Card → Pair
-    1.0,   // Two Jokers → Four of a Kind
     0.2,   // Joker → Royal Flush
     // Additional 1 Joker scenarios
     1.5,   // Joker + Two Pair → Full House
@@ -390,14 +291,6 @@ export function getRandomScenario(): MockScenario {
     2.5,   // Joker → Flush
     6.0,   // Joker + Pair → Three of a Kind (Medium)
     0.3,   // Joker → Straight Flush
-    // Additional 2 Jokers scenarios
-    1.5,   // Two Jokers + Pair → Four of a Kind (Aces)
-    0.8,   // Two Jokers + Triple → Four of a Kind
-    2.5,   // Two Jokers → Straight
-    2.0,   // Two Jokers → Flush
-    0.4,   // Two Jokers → Straight Flush
-    8.0,   // Two Jokers + High Cards → Pair
-    4.0,   // Two Jokers + High Card → Three of a Kind
   ];
   
   const totalWeight = weights.reduce((sum, w) => sum + w, 0);

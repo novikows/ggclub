@@ -129,7 +129,7 @@ export interface AuthenticateResponse {
 export interface PlayRequest {
   sessionID: string;
   amount: number; // Bet in engine units (e.g., 1000000 = $1.00)
-  mode: string; // Game mode: 'base', 'bonus_1joker', 'bonus_2jokers'
+  mode: string; // Game mode: 'base', 'bonus_1joker'
 }
 
 /** POST /wallet/play response */

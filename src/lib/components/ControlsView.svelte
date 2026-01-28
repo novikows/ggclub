@@ -8,7 +8,6 @@
     onBetIncrease, 
     onBetDecrease,
     onToggleSound,
-    onOpenBonusModal,
     soundEnabled = true,
     displayBalance = 0
   }: {
@@ -16,7 +15,6 @@
     onBetIncrease: () => void;
     onBetDecrease: () => void;
     onToggleSound?: () => void;
-    onOpenBonusModal?: () => void;
     soundEnabled?: boolean;
     displayBalance?: number;
   } = $props();
@@ -27,10 +25,8 @@
 
   const canPlay = $derived(gameState.state === 'IDLE' && gameState.balance >= gameState.getEffectiveBet());
   const canChangeBet = $derived(gameState.state === 'IDLE');
-  const bonusModes = $derived(gameState.config?.bonusModes || []);
-  const hasBonusModes = $derived(bonusModes.length > 0);
   const effectiveBet = $derived(gameState.getEffectiveBet());
-  const selectedMode = $derived(gameState.selectedMode);
+  const isJokerMode = $derived(gameState.isJokerModeEnabled);
 
   function handlePlayClick() {
     audioManager.playEffect('button-click');
@@ -47,37 +43,14 @@
     onBetDecrease();
   }
 
-  function handleModeSelect(modeId: string) {
+  function handleJokerToggle() {
     if (!canChangeBet) return;
     audioManager.playEffect('button-click');
-    gameState.setSelectedMode(modeId);
-  }
-
-  function handleBonusClick() {
-    if (!canChangeBet || !onOpenBonusModal) return;
-    audioManager.playEffect('button-click');
-    onOpenBonusModal();
+    gameState.toggleJokerMode();
   }
 </script>
 
 <div class="controls">
-  {#if selectedMode !== 'base'}
-    <div class="active-mode-badge">
-      <span class="badge-icon">🃏</span>
-      <span class="badge-text">
-        {bonusModes.find(m => m.id === selectedMode)?.name || 'Bonus Mode'}
-      </span>
-      <span class="badge-cost">x{bonusModes.find(m => m.id === selectedMode)?.cost || 1}</span>
-      <button 
-        class="badge-clear" 
-        onclick={() => handleModeSelect('base')}
-        title="Clear bonus mode"
-      >
-        ✕
-      </button>
-    </div>
-  {/if}
-
   <div class="info-row">
     <div class="info-item">
       <span class="label">Balance:</span>
@@ -98,17 +71,18 @@
       -
     </button>
     
-    {#if hasBonusModes && onOpenBonusModal}
-      <button 
-        class="btn btn-bonus" 
-        onclick={handleBonusClick} 
-        disabled={!canChangeBet}
-        title="Open Bonus Rounds"
-      >
-        <span class="bonus-icon">🃏</span>
-        <span>BONUS</span>
-      </button>
-    {/if}
+    <button 
+      class="btn btn-joker" 
+      class:active={isJokerMode}
+      onclick={handleJokerToggle} 
+      disabled={!canChangeBet}
+      title="Toggle Joker Mode (Bet × 2.25)"
+    >
+      <div class="joker-card" class:spinning={isJokerMode}>
+        🃏
+      </div>
+      <span class="joker-text">JOKER</span>
+    </button>
     
     <button class="btn btn-primary btn-play" onclick={handlePlayClick} disabled={!canPlay}>
       {#if gameState.state === 'SPINNING'}
@@ -144,66 +118,6 @@
     flex-direction: column;
     gap: 16px;
     min-width: 400px;
-  }
-
-  .active-mode-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: linear-gradient(45deg, #ffd700, #ffed4e);
-    border: 2px solid #ffd700;
-    border-radius: 12px;
-    color: #000;
-    font-weight: bold;
-    font-size: 14px;
-    animation: glow 2s ease-in-out infinite;
-  }
-
-  @keyframes glow {
-    0%, 100% {
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-    }
-    50% {
-      box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
-    }
-  }
-
-  .badge-icon {
-    font-size: 20px;
-  }
-
-  .badge-text {
-    flex: 1;
-  }
-
-  .badge-cost {
-    padding: 2px 8px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
-    font-size: 12px;
-  }
-
-  .badge-clear {
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    background: rgba(0, 0, 0, 0.3);
-    border: none;
-    border-radius: 50%;
-    color: #000;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-
-  .badge-clear:hover {
-    background: rgba(0, 0, 0, 0.5);
-    transform: scale(1.1);
   }
 
   .info-row {
@@ -282,33 +196,63 @@
     min-width: 120px;
   }
 
-  .btn-bonus {
-    background: linear-gradient(45deg, #ffd700, #ffed4e);
-    color: #000;
+  .btn-joker {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
     min-width: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    animation: pulse 2s ease-in-out infinite;
+    gap: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
   }
 
-  @keyframes pulse {
+  .btn-joker.active {
+    background: linear-gradient(45deg, #ffd700, #ffed4e);
+    color: #000;
+    border-color: #ffd700;
+    animation: jokerGlow 2s ease-in-out infinite;
+  }
+
+  @keyframes jokerGlow {
     0%, 100% {
-      box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
     }
     50% {
-      box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
     }
   }
 
-  .btn-bonus:not(:disabled):hover {
+  .btn-joker:not(:disabled):hover {
     transform: scale(1.05);
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+    border-color: rgba(255, 255, 255, 0.5);
   }
 
-  .bonus-icon {
-    font-size: 20px;
+  .btn-joker.active:not(:disabled):hover {
+    box-shadow: 0 0 35px rgba(255, 215, 0, 0.9);
+  }
+
+  .joker-card {
+    font-size: 24px;
+    transition: transform 0.3s ease;
+  }
+
+  .joker-card.spinning {
+    animation: spinCard 2s linear infinite;
+  }
+
+  @keyframes spinCard {
+    0% {
+      transform: rotateY(0deg);
+    }
+    100% {
+      transform: rotateY(360deg);
+    }
+  }
+
+  .joker-text {
+    font-weight: bold;
   }
 
   .btn-secondary {

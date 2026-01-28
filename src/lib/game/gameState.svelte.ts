@@ -11,6 +11,7 @@ class GameStateStore {
   revealed = $state<boolean[]>([false, false, false, false, false]);
   currentEvents = $state<GameEvent[]>([]);
   selectedMode = $state<string>('base');
+  isJokerModeEnabled = $state<boolean>(false);
 
   setState(newState: GameState) {
     this.state = newState;
@@ -52,6 +53,15 @@ class GameStateStore {
     this.selectedMode = mode;
   }
 
+  setJokerModeEnabled(enabled: boolean) {
+    this.isJokerModeEnabled = enabled;
+    this.selectedMode = enabled ? 'joker' : 'base';
+  }
+
+  toggleJokerMode() {
+    this.setJokerModeEnabled(!this.isJokerModeEnabled);
+  }
+
   resetBoard() {
     this.board = [null, null, null, null, null];
     this.revealed = [false, false, false, false, false];
@@ -79,6 +89,9 @@ class GameStateStore {
   }
 
   getEffectiveBet(): number {
+    if (this.isJokerModeEnabled) {
+      return this.currentBet * 2.25;
+    }
     const mode = this.config?.bonusModes?.find(m => m.id === this.selectedMode);
     const multiplier = mode?.cost || 1;
     return this.currentBet * multiplier;

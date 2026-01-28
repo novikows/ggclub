@@ -59,13 +59,6 @@ export async function authenticate(
           description: 'Гарантированный 1 джокер в раздаче',
           icon: '🃏',
         },
-        {
-          id: 'bonus_2jokers',
-          name: 'Guaranteed 2 Jokers',
-          cost: 15.0,
-          description: 'Гарантированные 2 джокера в раздаче',
-          icon: '🃏🃏',
-        },
       ],
     },
     sessionID: mockSessionID,
@@ -86,9 +79,6 @@ function getScenariosForMode(mode: string): any[] {
   if (mode === 'bonus_1joker') {
     // Only scenarios with exactly 1 joker
     return MOCK_SCENARIOS.filter(s => countJokers(s) === 1);
-  } else if (mode === 'bonus_2jokers') {
-    // Only scenarios with exactly 2 jokers
-    return MOCK_SCENARIOS.filter(s => countJokers(s) === 2);
   } else {
     // Base mode: all scenarios
     return MOCK_SCENARIOS;
