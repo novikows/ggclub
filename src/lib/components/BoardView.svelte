@@ -1,17 +1,24 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import CardSprite from './CardSprite.svelte';
   import type { Symbol } from '$lib/types';
 
   let { 
     cards = $bindable([null, null, null, null, null] as (Symbol | null)[]),
-    winningPositions = []
+    winningPositions = [],
+    initialFaceUp = false
   }: {
     cards?: (Symbol | null)[];
     winningPositions?: number[];
+    initialFaceUp?: boolean;
   } = $props();
   
-  let cardComponents: CardSprite[] = [];
+  let card0: CardSprite | undefined = $state();
+  let card1: CardSprite | undefined = $state();
+  let card2: CardSprite | undefined = $state();
+  let card3: CardSprite | undefined = $state();
+  let card4: CardSprite | undefined = $state();
+  
+  const cardComponents = $derived([card0, card1, card2, card3, card4]);
   
   async function revealCards(symbols: Symbol[]) {
     if (symbols.length !== 5) {
@@ -98,14 +105,11 @@
 </script>
 
 <div class="board">
-  {#each cards as card, i}
-    <CardSprite 
-      bind:this={cardComponents[i]} 
-      symbol={card} 
-      highlighted={winningPositions.includes(i)} 
-      position={i}
-    />
-  {/each}
+  <CardSprite bind:this={card0} symbol={cards[0]} highlighted={winningPositions.includes(0)} position={0} {initialFaceUp} />
+  <CardSprite bind:this={card1} symbol={cards[1]} highlighted={winningPositions.includes(1)} position={1} {initialFaceUp} />
+  <CardSprite bind:this={card2} symbol={cards[2]} highlighted={winningPositions.includes(2)} position={2} {initialFaceUp} />
+  <CardSprite bind:this={card3} symbol={cards[3]} highlighted={winningPositions.includes(3)} position={3} {initialFaceUp} />
+  <CardSprite bind:this={card4} symbol={cards[4]} highlighted={winningPositions.includes(4)} position={4} {initialFaceUp} />
 </div>
 
 <style>

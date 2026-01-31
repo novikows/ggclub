@@ -1,18 +1,24 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { audioManager } from '$lib/game/audioManager.svelte';
   import type { Symbol } from '$lib/types';
 
   let { 
     symbol = $bindable(null as Symbol | null), 
     highlighted = false,
-    position = 0
+    position = 0,
+    initialFaceUp = false
   } = $props();
   
-  // Все 5 карт видны изначально (перевернутые)
   let visible = $state(true);
   let faceUp = $state(false);
   let transforming = $state(false);
+  let hasAnimated = $state(false);
+  
+  $effect(() => {
+    if (!hasAnimated) {
+      faceUp = initialFaceUp;
+    }
+  });
   let scale = $state(1);
   let rotateY = $state(0);
   let translateX = $state(0);
@@ -114,6 +120,7 @@
   }
 
   async function flipToFaceUp() {
+    hasAnimated = true;
     audioManager.playEffect('card-flip');
     await animate({ rotateY: 90 }, 200);
     faceUp = true;
@@ -140,6 +147,7 @@
     faceUp = false;
     highlighted = false;
     transforming = false;
+    hasAnimated = false;
     scale = 1;
     rotateY = 0;
     translateX = 0;

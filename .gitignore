@@ -54,3 +54,6 @@ temp/
 
 # Build artifacts
 *.tsbuildinfo
+
+*storybook.log
+storybook-static
