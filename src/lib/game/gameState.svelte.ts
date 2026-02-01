@@ -55,7 +55,7 @@ class GameStateStore {
 
   setJokerModeEnabled(enabled: boolean) {
     this.isJokerModeEnabled = enabled;
-    this.selectedMode = enabled ? 'joker' : 'base';
+    this.selectedMode = enabled ? 'bonus_1joker' : 'base';
   }
 
   toggleJokerMode() {

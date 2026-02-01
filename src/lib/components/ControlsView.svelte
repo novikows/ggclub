@@ -1,6 +1,7 @@
 <script lang="ts">
   import { gameState } from '$lib/game/gameState.svelte';
   import { audioManager } from '$lib/game/audioManager.svelte';
+  import ConfirmModal from './ConfirmModal.svelte';
   import type { BonusMode } from '$lib/types';
 
   let { 
@@ -18,6 +19,9 @@
     soundEnabled?: boolean;
     displayBalance?: number;
   } = $props();
+
+  let showConfirmModal = $state(false);
+  let pendingJokerState = $state(false);
 
   const formatMoney = (amount: number): string => {
     return `$${(amount / 1_000_000).toFixed(2)}`;
@@ -46,7 +50,24 @@
   function handleJokerToggle() {
     if (!canChangeBet) return;
     audioManager.playEffect('button-click');
-    gameState.toggleJokerMode();
+    
+    if (!isJokerMode) {
+      pendingJokerState = true;
+      showConfirmModal = true;
+    } else {
+      gameState.toggleJokerMode();
+    }
+  }
+
+  function confirmJokerMode() {
+    showConfirmModal = false;
+    gameState.setJokerModeEnabled(true);
+    audioManager.playEffect('button-click');
+  }
+
+  function cancelJokerMode() {
+    showConfirmModal = false;
+    pendingJokerState = false;
   }
 </script>
 
@@ -104,6 +125,16 @@
     </button>
   {/if}
 </div>
+
+<ConfirmModal
+  visible={showConfirmModal}
+  title="Activate Joker Mode?"
+  message="Joker Mode increases your bet by 2.25× but guarantees at least 1 Joker in every hand for better winning chances!"
+  confirmText="Activate"
+  cancelText="Cancel"
+  onConfirm={confirmJokerMode}
+  onCancel={cancelJokerMode}
+/>
 
 <style>
   .controls {

@@ -159,4 +159,15 @@
       padding-left: 10px;
     }
   }
+
+  @media (max-width: 400px) {
+    .board {
+      gap: 4px;
+      padding: 5px;
+      width: 100%;
+      /* 5 карт * 65px + 4 gaps * 4px = 341px
+         Для iPhone SE (375px) отступ: (375 - 341) / 2 = 17px */
+      padding-left: 17px;
+    }
+  }
 </style>
