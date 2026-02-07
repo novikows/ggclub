@@ -18,6 +18,8 @@
   let audioInitialized = $state(false);
   let displayBalance = $state(0);
   let targetBalance = $state(0);
+  let videoElement: HTMLVideoElement | undefined;
+  let isLandscape = $state(false);
 
   onMount(async () => {
     try {
@@ -26,7 +28,22 @@
       await controller.initialize();
       displayBalance = gameState.balance;
       targetBalance = gameState.balance;
+      
+      // Check initial orientation
+      checkOrientation();
+      
+      // Listen for orientation changes
+      window.addEventListener('resize', checkOrientation);
+      window.addEventListener('orientationchange', checkOrientation);
+      
       initialized = true;
+      
+      // Try to play video if in landscape mode
+      if (isLandscape && videoElement) {
+        videoElement.play().catch(() => {
+          console.log('[Game] Video autoplay prevented');
+        });
+      }
     } catch (err) {
       console.error('[Game] Initialization failed:', err);
       error = err instanceof Error ? err.message : 'Failed to initialize game';
@@ -77,6 +94,11 @@
       audioInitialized = true;
     }
     
+    // Try to play video on first user interaction
+    if (isLandscape && videoElement && videoElement.paused) {
+      videoElement.play().catch(() => {});
+    }
+    
     showWinModal = false;
     displayBalance = gameState.balance - gameState.currentBet;
     boardViewRef?.reset();
@@ -87,6 +109,19 @@
 
   function toggleSound() {
     audioManager.toggleSound();
+  }
+
+  function checkOrientation() {
+    isLandscape = window.innerWidth > window.innerHeight;
+    
+    // Start/stop video based on orientation
+    if (videoElement) {
+      if (isLandscape && videoElement.paused) {
+        videoElement.play().catch(() => {});
+      } else if (!isLandscape && !videoElement.paused) {
+        videoElement.pause();
+      }
+    }
   }
 
   function handleBetIncrease() {
@@ -155,7 +190,23 @@
 </svelte:head>
 
 <div class="game-container">
-  <div class="background-image"></div>
+  <!-- Video background for landscape/desktop -->
+  {#if isLandscape}
+    <video 
+      class="background-video" 
+      autoplay 
+      loop 
+      muted 
+      playsinline
+      preload="auto"
+      bind:this={videoElement}
+    >
+      <source src="/assets/backgrounds/background_ai_video.mp4" type="video/mp4" />
+    </video>
+  {/if}
+  
+  <!-- Static image background -->
+  <div class="background-image" class:hidden={isLandscape}></div>
   
   {#if error}
     <div class="error-screen">
@@ -203,6 +254,18 @@
     background: #0f2027; /* Fallback color */
   }
 
+  .background-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
   .background-image {
     position: absolute;
     top: 0;
@@ -216,12 +279,12 @@
     z-index: 0;
     opacity: 0.8;
     pointer-events: none;
+    transition: opacity 0.3s ease;
   }
 
-  @media (max-width: 768px) {
-    .background-image {
-      background-image: url('/assets/backgrounds/bg_static_mobile.jpg');
-    }
+  .background-image.hidden {
+    opacity: 0;
+    pointer-events: none;
   }
 
   .game-content {
